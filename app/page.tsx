@@ -66,11 +66,15 @@ export default function Page() {
   const [selectedSection, setSelectedSection] = useState('69_A')
 
   useEffect(() => {
-    setIsMounted(true)
     setNow(new Date())
-    setSelectedDay(getToday())
+    const today = getToday()
+    setSelectedDay(today)
+    window.localStorage.setItem('routine-day', today)
+    
     const savedSection = window.localStorage.getItem('routine-section')
     if (savedSection && SECTIONS.includes(savedSection)) setSelectedSection(savedSection)
+    
+    setIsMounted(true)
     const timer = window.setInterval(() => setNow(new Date()), 1000)
     return () => window.clearInterval(timer)
   }, [])
