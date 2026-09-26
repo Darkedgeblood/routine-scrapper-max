@@ -13,8 +13,8 @@ export const metadata: Metadata = {
     title: 'Routine Scrapper Max',
   },
   icons: {
-    icon: '/Gemini_Generated_Image_koho2skoho2skoho.jpg',
-    apple: '/Gemini_Generated_Image_koho2skoho2skoho.jpg',
+    icon: '/icon.png',
+    apple: '/apple-icon.png',
   },
 }
 
