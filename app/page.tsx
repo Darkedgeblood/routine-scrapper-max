@@ -47,8 +47,8 @@ const ROUTINE_DATA: RoutineItem[] = [
   { id: '21', day: 'Thursday', startTime: '02:30 PM', endTime: '04:00 PM', courseCode: 'CSE215', courseTitle: 'CSE215', room: 'KT-503', teacher: 'EHL', section: '69_F', isRetake: false },
 ]
 
-function getToday() {
-  const day = new Intl.DateTimeFormat('en-US', { weekday: 'short' }).format(new Date())
+function getToday(date = new Date()) {
+  const day = new Intl.DateTimeFormat('en-US', { weekday: 'short' }).format(date)
   return DAYS.includes(day as (typeof DAYS)[number]) ? day : 'Sat'
 }
 
@@ -59,12 +59,16 @@ function timeToMinutes(value: string) {
 }
 
 export default function Page() {
-  const [selectedDay, setSelectedDay] = useState(getToday())
-  const [now, setNow] = useState(new Date())
+  const [selectedDay, setSelectedDay] = useState<(typeof DAYS)[number]>('Sat')
+  const [now, setNow] = useState<Date | null>(null)
   const [dark, setDark] = useState(true)
+  const [isMounted, setIsMounted] = useState(false)
   const [selectedSection, setSelectedSection] = useState('69_A')
 
   useEffect(() => {
+    setIsMounted(true)
+    setNow(new Date())
+    setSelectedDay(getToday())
     const savedSection = window.localStorage.getItem('routine-section')
     if (savedSection && SECTIONS.includes(savedSection)) setSelectedSection(savedSection)
     const timer = window.setInterval(() => setNow(new Date()), 1000)
@@ -80,7 +84,8 @@ export default function Page() {
   const dayClasses = useMemo(() => ROUTINE_DATA.filter((item) => item.day === FULL_DAYS[selectedDay] && (item.section === selectedSection || item.isRetake === true)), [selectedDay, selectedSection])
   const regularCount = dayClasses.filter((item) => !item.isRetake).length
   const retakeCount = dayClasses.filter((item) => item.isRetake).length
-  const nextClass = dayClasses.find((item) => timeToMinutes(item.startTime) > now.getHours() * 60 + now.getMinutes())
+  const currentMinutes = now ? now.getHours() * 60 + now.getMinutes() : -1
+  const nextClass = dayClasses.find((item) => timeToMinutes(item.startTime) > currentMinutes)
 
   return (
     <main className={dark ? 'min-h-screen bg-[#08111b] text-slate-100' : 'min-h-screen bg-slate-50 text-slate-900'}>
@@ -96,7 +101,7 @@ export default function Page() {
         <section className="mt-8 grid gap-4 lg:grid-cols-[1fr_280px]">
           <div className="rounded-[2rem] border border-cyan-300/10 bg-gradient-to-br from-[#102b3c] via-[#0b1c2a] to-[#0a1722] p-5 shadow-2xl shadow-black/20 sm:p-7">
             <div className="flex items-start justify-between gap-4"><div><p className="text-sm font-medium text-cyan-300">{FULL_DAYS[selectedDay]}</p><h1 className="mt-2 text-3xl font-semibold tracking-tight sm:text-4xl">Your classes, <span className="text-cyan-300">at a glance.</span></h1></div><Zap className="mt-1 text-cyan-300" /></div>
-            <div className="mt-8 flex items-end justify-between gap-4"><div><p className="font-mono text-4xl font-semibold tracking-tight tabular-nums sm:text-5xl">{now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</p><p className="mt-1 text-sm text-slate-400">{now.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</p></div><div className="hidden text-right sm:block"><p className="text-xs uppercase tracking-[0.18em] text-slate-500">Next up</p><p className="mt-1 font-medium text-slate-200">{nextClass ? `${nextClass.courseCode} · ${nextClass.startTime} - ${nextClass.endTime}` : 'No more classes'}</p></div></div>
+            <div className="mt-8 flex items-end justify-between gap-4"><div><p className="font-mono text-4xl font-semibold tracking-tight tabular-nums sm:text-5xl">{isMounted && now ? now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '12:00 AM'}</p><p className="mt-1 text-sm text-slate-400">{isMounted && now ? now.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'Loading date…'}</p></div><div className="hidden text-right sm:block"><p className="text-xs uppercase tracking-[0.18em] text-slate-500">Next up</p><p className="mt-1 font-medium text-slate-200">{nextClass ? `${nextClass.courseCode} · ${nextClass.startTime} - ${nextClass.endTime}` : 'No more classes'}</p></div></div>
           </div>
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-1"><div className="rounded-3xl border border-white/10 bg-white/[0.04] p-5"><Users className="text-cyan-300" /><p className="mt-5 text-3xl font-semibold">{regularCount}</p><p className="text-sm text-slate-400">regular classes</p></div><div className="rounded-3xl border border-amber-300/20 bg-amber-300/[0.06] p-5"><div className="flex items-center gap-2"><span className="size-2 rounded-full bg-amber-300" /><p className="text-xs font-semibold uppercase tracking-widest text-amber-200">Retake</p></div><p className="mt-5 text-3xl font-semibold">{retakeCount}</p><p className="text-sm text-slate-400">MAT211 session</p></div></div>
         </section>
@@ -106,7 +111,7 @@ export default function Page() {
           <div className="relative w-full sm:max-w-xs"><label htmlFor="section-select" className="sr-only">Select batch section</label><select id="section-select" value={selectedSection} onChange={(event) => chooseSection(event.target.value)} className="w-full appearance-none rounded-2xl border border-white/10 bg-slate-950/40 px-4 py-3 text-sm font-medium text-slate-100 outline-none ring-cyan-300 transition focus:ring-2">{SECTIONS.map((section) => <option key={section} value={section} className="bg-slate-900">{section}</option>)}</select></div>
         </section>
 
-        <nav aria-label="Select a day" className="mt-5 flex gap-2 overflow-x-auto pb-1">{DAYS.map((day) => <button key={day} onClick={() => setSelectedDay(day)} className={`min-w-[58px] rounded-2xl px-4 py-3 text-sm font-semibold transition ${selectedDay === day ? 'bg-cyan-300 text-slate-950 shadow-lg shadow-cyan-300/20' : 'border border-white/10 bg-white/[0.04] text-slate-400 hover:bg-white/[0.08]'}`}><span className="block text-xs opacity-60">{day === getToday() ? 'Today' : FULL_DAYS[day].slice(0, 3)}</span>{day}</button>)}</nav>
+        <nav aria-label="Select a day" className="mt-5 flex gap-2 overflow-x-auto pb-1">{DAYS.map((day) => <button key={day} onClick={() => setSelectedDay(day)} className={`min-w-[58px] rounded-2xl px-4 py-3 text-sm font-semibold transition ${selectedDay === day ? 'bg-cyan-300 text-slate-950 shadow-lg shadow-cyan-300/20' : 'border border-white/10 bg-white/[0.04] text-slate-400 hover:bg-white/[0.08]'}`}><span className="block text-xs opacity-60">{isMounted && day === getToday(now ?? undefined) ? 'Today' : FULL_DAYS[day].slice(0, 3)}</span>{day}</button>)}</nav>
 
         <section className="mt-5"><div className="mb-4 flex items-center justify-between"><div><h2 className="text-xl font-semibold">{FULL_DAYS[selectedDay]} schedule</h2><p className="mt-1 text-sm text-slate-400">{dayClasses.length ? `${dayClasses.length} classes from your routine` : 'A clear day — no classes scheduled.'}</p></div><div className="hidden items-center gap-2 text-xs text-slate-500 sm:flex"><Clock3 /> 90 min sessions</div></div>
           <div className="flex flex-col gap-3">{dayClasses.map((item) => <article key={item.id} className={`group flex items-stretch gap-3 rounded-3xl border p-4 transition hover:-translate-y-0.5 sm:gap-5 sm:p-5 ${item.isRetake ? 'border-amber-300/30 bg-amber-300/[0.07]' : 'border-white/10 bg-white/[0.04] hover:border-cyan-300/20'}`}><div className="flex w-[58px] shrink-0 flex-col justify-center border-r border-white/10 pr-3 sm:w-[88px] sm:pr-5"><span className="font-mono text-sm font-semibold tabular-nums text-slate-200">{item.startTime}</span><span className="my-1 h-px w-4 bg-slate-600" /><span className="font-mono text-xs tabular-nums text-slate-500">{item.endTime}</span></div><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><h3 className="text-base font-semibold sm:text-lg">{item.courseCode}</h3><span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${item.isRetake ? 'bg-amber-300 text-amber-950' : 'bg-cyan-300/10 text-cyan-200'}`}>{item.isRetake ? 'Your retake' : `Section ${item.section}`}</span></div><div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-400"><span className="inline-flex items-center gap-1.5"><MapPin /> {item.room}</span><span className="inline-flex items-center gap-1.5"><Users /> {item.teacher}</span></div></div><ChevronRight className="my-auto hidden text-slate-600 transition group-hover:translate-x-1 sm:block" /></article>)}</div>
