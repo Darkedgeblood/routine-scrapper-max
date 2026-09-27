@@ -6,7 +6,6 @@ export const metadata: Metadata = {
   title: 'Routine Scrapper Max',
   description: 'A live class routine for CSE Batch 69 and MAT211 retake sessions.',
   generator: 'v0.app',
-  manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
