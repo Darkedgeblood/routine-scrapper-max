@@ -13,14 +13,19 @@ export default function manifest(): MetadataRoute.Manifest {
     orientation: 'portrait',
     icons: [
       {
-        src: '/Gemini_Generated_Image_koho2skoho2skoho.jpg',
+        src: '/icon.png',
         sizes: '192x192',
-        type: 'image/jpeg',
+        type: 'image/png',
       },
       {
-        src: '/Gemini_Generated_Image_koho2skoho2skoho.jpg',
+        src: '/icon.png',
         sizes: '512x512',
-        type: 'image/jpeg',
+        type: 'image/png',
+      },
+      {
+        src: '/apple-icon.png',
+        sizes: '512x512',
+        type: 'image/png',
       },
     ],
   }
