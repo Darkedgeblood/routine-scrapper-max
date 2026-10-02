@@ -224,3 +224,12 @@
 .animate-splash-fade {
   animation: splashFadeOut 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
+
+/* Break-time stripes (theme-aware) */
+.break-stripes {
+  background: repeating-linear-gradient(45deg, #eef2f7, #eef2f7 10px, #e2e8f0 10px, #e2e8f0 20px);
+}
+
+.dark .break-stripes {
+  background: repeating-linear-gradient(45deg, #182030, #182030 10px, #141b29 10px, #141b29 20px);
+}
