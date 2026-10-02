@@ -5,7 +5,7 @@ import './globals.css'
 
 export const metadata: Metadata = {
   title: 'Routine Scrapper Max',
-  description: 'A live class routine for CSE Batch 69 and MAT211 retake sessions.',
+  description: 'A live class routine for CSE Batch 69.',
   generator: 'v0.app',
   appleWebApp: {
     capable: true,
