@@ -46,15 +46,15 @@ const ROUTINE_DATA: RoutineItem[] = [
   { id: 'thu-cse215', day: 'Thursday', startTime: '11:30 AM', endTime: '01:00 PM', startMinutes: 690, endMinutes: 780, courseCode: 'CSE215', courseTitle: 'Electronic Devices and Circuits', section: '69_P', teacher: 'SRRS', room: 'KT-220', isRetake: false, isNotTaken: false, subSection: null },
 ]
 
-function getToday(date = new Date()) {
+// Returns today's key, or null on a day with no classes (Friday).
+function getToday(date = new Date()): (typeof DAYS)[number] | null {
   const day = new Intl.DateTimeFormat('en-US', { weekday: 'short' }).format(date)
-  return DAYS.includes(day as (typeof DAYS)[number]) ? day : 'Sat'
+  return DAYS.includes(day as (typeof DAYS)[number]) ? (day as (typeof DAYS)[number]) : null
 }
 
-function timeToMinutes(value: string) {
-  const [time, period] = value.split(' ')
-  const [hours, minutes] = time.split(':').map(Number)
-  return ((hours % 12) + (period === 'PM' ? 12 : 0)) * 60 + minutes
+// Classes that are shown greyed out and don't count towards "next up" or totals.
+function isInactive(item: RoutineItem) {
+  return item.isNotTaken || item.subSection === '69_P2'
 }
 
 export default function Page() {
@@ -70,7 +70,7 @@ export default function Page() {
 
   useEffect(() => {
     setNow(new Date())
-    const today = getToday() as (typeof DAYS)[number]
+    const today = getToday() ?? 'Sat'
     setSelectedDay(today)
     window.localStorage.setItem('routine-day', today)
 
@@ -105,14 +105,26 @@ export default function Page() {
     [selectedDay, selectedSection]
   )
 
+  const sectionHasData = useMemo(
+    () => ROUTINE_DATA.some((item) => !item.isRetake && item.section === selectedSection),
+    [selectedSection]
+  )
+
   const totalDurationMinutes = dayClasses
-    .filter((item) => !item.isNotTaken && item.subSection !== '69_P2')
+    .filter((item) => !isInactive(item))
     .reduce((total, item) => total + item.endMinutes - item.startMinutes, 0)
   const totalDurationLabel = `Total: ${Math.floor(totalDurationMinutes / 60)}h ${totalDurationMinutes % 60}m`
   const regularCount = dayClasses.filter((item) => !item.isRetake && !item.isNotTaken).length
   const retakeCount = dayClasses.filter((item) => item.isRetake).length
   const currentMinutes = now ? now.getHours() * 60 + now.getMinutes() : -1
-  const nextClass = dayClasses.find((item) => timeToMinutes(item.startTime) > currentMinutes)
+  const isViewingToday = isMounted && now !== null && selectedDay === getToday(now)
+  const activeClasses = dayClasses.filter((item) => !isInactive(item))
+  // Only compare against the clock when the selected day is today; otherwise show the day's first class.
+  const upcomingClass = isViewingToday
+    ? activeClasses.find((item) => item.startMinutes > currentMinutes)
+    : activeClasses[0]
+  const upNextLabel = isViewingToday ? 'Next up' : 'First class'
+  const upNextEmpty = isViewingToday && activeClasses.length > 0 ? 'No more classes' : 'No classes'
 
   return (
     <>
@@ -138,7 +150,7 @@ export default function Page() {
       )}
 
       {/* Main Routine App View */}
-      <main className={dark ? 'min-h-screen bg-[#08111b] text-slate-100' : 'min-h-screen bg-slate-50 text-slate-900'}>
+      <main className={dark ? 'dark min-h-screen bg-[#08111b] text-slate-100' : 'min-h-screen bg-slate-50 text-slate-900'}>
         <div className="mx-auto min-h-screen max-w-5xl px-4 py-5 sm:px-6 sm:py-8">
           <header className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
@@ -147,66 +159,66 @@ export default function Page() {
               </div>
               <div>
                 <p className="text-lg font-semibold tracking-tight">Routine</p>
-                <p className="text-xs text-slate-400">CSE · Batch 69</p>
+                <p className="text-xs text-slate-600 dark:text-slate-400">CSE · Batch 69</p>
               </div>
             </div>
             <button
               aria-label="Toggle dark mode"
               onClick={() => setDark(!dark)}
-              className="flex size-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-slate-300 transition hover:bg-white/10"
+              className="flex size-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-100 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10"
             >
               {dark ? <Sun /> : <Moon />}
             </button>
           </header>
 
           <section className="mt-8 grid gap-4 lg:grid-cols-[1fr_280px]">
-            <div className="rounded-[2rem] border border-cyan-300/10 bg-gradient-to-br from-[#102b3c] via-[#0b1c2a] to-[#0a1722] p-5 shadow-2xl shadow-black/20 sm:p-7">
+            <div className="rounded-[2rem] border border-cyan-200 bg-gradient-to-br from-cyan-50 via-sky-50 to-white dark:border-cyan-300/10 dark:from-[#102b3c] dark:via-[#0b1c2a] dark:to-[#0a1722] p-5 shadow-xl shadow-slate-300/40 dark:shadow-2xl dark:shadow-black/20 sm:p-7">
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <p className="text-sm font-medium text-cyan-300">{FULL_DAYS[selectedDay]}</p>
+                  <p className="text-sm font-medium text-cyan-700 dark:text-cyan-300">{FULL_DAYS[selectedDay]}</p>
                   <h1 className="mt-2 text-3xl font-semibold tracking-tight sm:text-4xl">
-                    Your classes, <span className="text-cyan-300">at a glance.</span>
+                    Your classes, <span className="text-cyan-700 dark:text-cyan-300">at a glance.</span>
                   </h1>
                 </div>
-                <Zap className="mt-1 text-cyan-300" />
+                <Zap className="mt-1 text-cyan-700 dark:text-cyan-300" />
               </div>
               <div className="mt-8 flex items-end justify-between gap-4">
                 <div>
                   <p className="font-mono text-4xl font-semibold tracking-tight tabular-nums sm:text-5xl">
                     {isMounted && now ? now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '12:00 AM'}
                   </p>
-                  <p className="mt-1 text-sm text-slate-400">
+                  <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
                     {isMounted && now ? now.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'Loading date…'}
                   </p>
                 </div>
                 <div className="hidden text-right sm:block">
-                  <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Next up</p>
-                  <p className="mt-1 font-medium text-slate-200">
-                    {nextClass ? `${nextClass.courseCode} · ${nextClass.startTime} - ${nextClass.endTime}` : 'No more classes'}
+                  <p className="text-xs uppercase tracking-[0.18em] text-slate-500">{upNextLabel}</p>
+                  <p className="mt-1 font-medium text-slate-800 dark:text-slate-200">
+                    {upcomingClass ? `${upcomingClass.courseCode} · ${upcomingClass.startTime} - ${upcomingClass.endTime}` : upNextEmpty}
                   </p>
                 </div>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3 lg:grid-cols-1">
-              <div className="rounded-3xl border border-white/10 bg-white/[0.04] p-5">
-                <Users className="text-cyan-300" />
+              <div className="rounded-3xl border border-slate-200 dark:border-white/10 bg-white dark:bg-white/[0.04] p-5">
+                <Users className="text-cyan-700 dark:text-cyan-300" />
                 <p className="mt-5 text-3xl font-semibold">{regularCount}</p>
-                <p className="text-sm text-slate-400">regular classes</p>
+                <p className="text-sm text-slate-600 dark:text-slate-400">regular classes</p>
               </div>
-              <div className="rounded-3xl border border-amber-300/20 bg-amber-300/[0.06] p-5">
+              <div className="rounded-3xl border border-amber-300/60 bg-amber-50 p-5 dark:border-amber-300/20 dark:bg-amber-300/[0.06]">
                 <div className="flex items-center gap-2">
                   <span className="size-2 rounded-full bg-amber-300" />
-                  <p className="text-xs font-semibold uppercase tracking-widest text-amber-200">Retake</p>
+                  <p className="text-xs font-semibold uppercase tracking-widest text-amber-700 dark:text-amber-200">Retake</p>
                 </div>
                 <p className="mt-5 text-3xl font-semibold">{retakeCount}</p>
-                <p className="text-sm text-slate-400">MAT211 session</p>
+                <p className="text-sm text-slate-600 dark:text-slate-400">MAT211 session</p>
               </div>
             </div>
           </section>
 
-          <section className="mt-8 rounded-3xl border border-white/10 bg-white/[0.04] p-4 sm:flex sm:items-center sm:justify-between sm:gap-5">
+          <section className="mt-8 rounded-3xl border border-slate-200 dark:border-white/10 bg-white dark:bg-white/[0.04] p-4 sm:flex sm:items-center sm:justify-between sm:gap-5">
             <div className="mb-3 flex items-center gap-2 sm:mb-0">
-              <Search className="text-cyan-300" />
+              <Search className="text-cyan-700 dark:text-cyan-300" />
               <div>
                 <p className="text-sm font-semibold">Your section</p>
                 <p className="text-xs text-slate-500">Regular classes for {selectedSection}</p>
@@ -220,10 +232,10 @@ export default function Page() {
                 id="section-select"
                 value={selectedSection}
                 onChange={(event) => chooseSection(event.target.value)}
-                className="w-full appearance-none rounded-2xl border border-white/10 bg-slate-950/40 px-4 py-3 text-sm font-medium text-slate-100 outline-none ring-cyan-300 transition focus:ring-2"
+                className="w-full appearance-none rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-medium text-slate-900 outline-none ring-cyan-400 dark:border-white/10 dark:bg-slate-950/40 dark:text-slate-100 dark:ring-cyan-300 transition focus:ring-2"
               >
                 {SECTIONS.map((section) => (
-                  <option key={section} value={section} className="bg-slate-900">
+                  <option key={section} value={section} className="bg-white text-slate-900 dark:bg-slate-900 dark:text-slate-100">
                     {section}
                   </option>
                 ))}
@@ -239,11 +251,11 @@ export default function Page() {
                 className={`min-w-[58px] rounded-2xl px-4 py-3 text-sm font-semibold transition ${
                   selectedDay === day
                     ? 'bg-cyan-300 text-slate-950 shadow-lg shadow-cyan-300/20'
-                    : 'border border-white/10 bg-white/[0.04] text-slate-400 hover:bg-white/[0.08]'
+                    : 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-100 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-400 dark:hover:bg-white/[0.08]'
                 }`}
               >
                 <span className="block text-xs opacity-60">
-                  {isMounted && day === getToday(now ?? undefined) ? 'Today' : FULL_DAYS[day].slice(0, 3)}
+                  {isMounted && now !== null && day === getToday(now) ? 'Today' : FULL_DAYS[day].slice(0, 3)}
                 </span>
                 {day}
               </button>
@@ -254,8 +266,12 @@ export default function Page() {
             <div className="mb-4 flex items-center justify-between gap-4">
               <div>
                 <h2 className="text-xl font-semibold">{FULL_DAYS[selectedDay]} schedule</h2>
-                <p className="mt-1 text-sm text-slate-400">
-                  {dayClasses.length ? `${dayClasses.length} classes from your routine` : 'A clear day — no classes scheduled.'}
+                <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+                  {dayClasses.length
+                    ? `${dayClasses.length} classes from your routine`
+                    : sectionHasData
+                    ? 'A clear day — no classes scheduled.'
+                    : `No routine added for ${selectedSection} yet.`}
                 </p>
               </div>
               {totalDurationMinutes > 0 && (
@@ -265,26 +281,29 @@ export default function Page() {
               )}
             </div>
 
+            {!sectionHasData && (
+              <div className="mb-3 rounded-2xl border border-amber-400/50 bg-amber-100 px-4 py-3 text-sm text-amber-900 dark:border-amber-300/20 dark:bg-amber-300/[0.06] dark:text-amber-200">
+                No regular routine has been added for {selectedSection} yet. Only the MAT211 retake sessions are shown.
+              </div>
+            )}
+
             <div className="flex flex-col gap-3">
               {dayClasses.map((item, index) => {
                 const previous = dayClasses[index - 1]
                 const gap = previous ? item.startMinutes - previous.endMinutes : 0
                 const durationHours = Math.floor(gap / 60)
                 const durationMins = gap % 60
-                const inactive = item.isNotTaken || item.subSection === '69_P2'
+                const inactive = isInactive(item)
                 const skippedLabel = item.isNotTaken ? 'Not registered' : item.subSection === '69_P2' ? 'P2 Lab (skipped)' : ''
 
                 return (
                   <Fragment key={item.id}>
                     {gap > 0 && previous && (
                       <div
-                        className="flex items-center justify-between rounded-2xl border border-white/5 px-4 py-3 text-slate-400"
-                        style={{
-                          background: 'repeating-linear-gradient(45deg, #182030, #182030 10px, #141b29 10px, #141b29 20px)',
-                        }}
+                        className="break-stripes flex items-center justify-between rounded-2xl border border-slate-200 px-4 py-3 text-slate-600 dark:text-slate-400 dark:border-white/5"
                       >
                         <div>
-                          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-300">Break Time</p>
+                          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-700 dark:text-slate-300">Break Time</p>
                           <p className="mt-1 text-xs">
                             {previous.endTime} - {item.startTime} ({durationHours}h {durationMins}m)
                           </p>
@@ -296,14 +315,14 @@ export default function Page() {
                       key={item.id}
                       className={`group flex items-stretch gap-3 rounded-3xl border p-4 transition hover:-translate-y-0.5 sm:gap-5 sm:p-5 ${
                         inactive
-                          ? 'border-white/10 bg-white/[0.02] opacity-50 grayscale'
+                          ? 'border-slate-200 bg-slate-100 opacity-50 grayscale dark:border-white/10 dark:bg-white/[0.02]'
                           : item.isRetake
-                          ? 'border-amber-300/30 bg-amber-300/[0.07]'
-                          : 'border-white/10 bg-white/[0.04] hover:border-cyan-300/20'
+                          ? 'border-amber-400/50 bg-amber-100 dark:border-amber-300/30 dark:bg-amber-300/[0.07]'
+                          : 'border-slate-200 bg-white hover:border-cyan-400/40 dark:border-white/10 dark:bg-white/[0.04] dark:hover:border-cyan-300/20'
                       }`}
                     >
-                      <div className="flex w-[58px] shrink-0 flex-col justify-center border-r border-white/10 pr-3 sm:w-[88px] sm:pr-5">
-                        <span className="font-mono text-sm font-semibold tabular-nums text-slate-200">{item.startTime}</span>
+                      <div className="flex w-[58px] shrink-0 flex-col justify-center border-r border-slate-200 dark:border-white/10 pr-3 sm:w-[88px] sm:pr-5">
+                        <span className="font-mono text-sm font-semibold tabular-nums text-slate-800 dark:text-slate-200">{item.startTime}</span>
                         <span className="my-1 h-px w-4 bg-slate-600" />
                         <span className="font-mono text-xs tabular-nums text-slate-500">{item.endTime}</span>
                       </div>
@@ -315,24 +334,24 @@ export default function Page() {
                           <span
                             className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
                               inactive
-                                ? 'bg-slate-500/20 text-slate-400'
+                                ? 'bg-slate-500/20 text-slate-600 dark:text-slate-400'
                                 : item.isRetake
                                 ? 'bg-amber-300 text-amber-950'
-                                : 'bg-cyan-300/10 text-cyan-200'
+                                : 'bg-cyan-100 text-cyan-800 dark:bg-cyan-300/10 dark:text-cyan-200'
                             }`}
                           >
                             {inactive ? skippedLabel : item.isRetake ? 'Retake' : `Section ${item.section}`}
                           </span>
                           {item.subSection && (
-                            <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-semibold text-slate-400">
+                            <span className="rounded-full bg-slate-200 px-2 py-0.5 dark:bg-white/10 text-[10px] font-semibold text-slate-600 dark:text-slate-400">
                               {item.subSection}
                             </span>
                           )}
                         </div>
-                        <p className={`mt-1 text-sm ${inactive ? 'line-through text-slate-500' : 'text-slate-300'}`}>
+                        <p className={`mt-1 text-sm ${inactive ? 'line-through text-slate-500' : 'text-slate-700 dark:text-slate-300'}`}>
                           {item.courseTitle}
                         </p>
-                        <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-400">
+                        <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-600 dark:text-slate-400">
                           <span className="inline-flex items-center gap-1.5">
                             <MapPin className="size-3.5" /> {item.room}
                           </span>
@@ -349,7 +368,7 @@ export default function Page() {
             </div>
           </section>
 
-          <footer className="mt-10 flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-5 text-xs text-slate-500">
+          <footer className="mt-10 flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 dark:border-white/10 pt-5 text-xs text-slate-500">
             <span>Routine V3.1 · Effective 26 September 2026</span>
             <span className="inline-flex items-center gap-1.5">
               <span className="size-1.5 rounded-full bg-emerald-400" /> Live schedule
