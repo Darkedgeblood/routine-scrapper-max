@@ -2,8 +2,16 @@
 
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import { CalendarDays, ChevronRight, Coffee, MapPin, Moon, Search, Sun, Users, Zap } from 'lucide-react'
+import { Archivo_Black } from 'next/font/google' // <-- ADD THIS
+
+// Initialize Archivo Black (it only has a '400' weight)
+const archivoBlack = Archivo_Black({ 
+  weight: '400', 
+  subsets: ['latin'] 
+}) // <-- ADD THIS
 
 type RoutineItem = {
+// ... rest of your code stays the same
   id: string
   day: string
   startTime: string
@@ -238,7 +246,7 @@ export default function Page() {
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <p className="text-sm font-medium text-cyan-700 dark:text-cyan-300">{FULL_DAYS[selectedDay]}{selectedDateLabel ? ` · ${selectedDateLabel}` : ''}</p>
-                  <h1 className="mt-2 text-3xl font-semibold tracking-tight sm:text-4xl">
+                  <h1 className={`mt-2 text-3xl tracking-tight sm:text-4xl ${archivoBlack.className}`}>
                     Your classes, <span className="text-cyan-700 dark:text-cyan-300">at a glance.</span>
                   </h1>
                 </div>
