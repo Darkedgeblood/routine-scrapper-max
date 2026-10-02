@@ -1,6 +1,6 @@
 'use client'
 
-import { Fragment, useEffect, useMemo, useState } from 'react'
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import { CalendarDays, ChevronRight, Coffee, MapPin, Moon, Search, Sun, Users, Zap } from 'lucide-react'
 
 type RoutineItem = {
@@ -17,7 +17,6 @@ type RoutineItem = {
   startMinutes: number
   endMinutes: number
   isRetake: boolean
-  isNotTaken: boolean
 }
 
 const DAYS = ['Sat', 'Sun', 'Mon', 'Tue', 'Wed', 'Thu'] as const
@@ -31,20 +30,29 @@ const FULL_DAYS: Record<string, string> = {
 }
 const SECTIONS = ['69_A', '69_B', '69_C', '69_D', '69_E', '69_F', '69_G', '69_H', '69_I', '69_J', '69_K', '69_L', '69_M', '69_N', '69_O', '69_P']
 
+// The class routine everyone sees.
 const ROUTINE_DATA: RoutineItem[] = [
-  { id: 'sat-retake-mat211', day: 'Saturday', startTime: '11:30 AM', endTime: '01:00 PM', startMinutes: 690, endMinutes: 780, courseCode: 'MAT211', courseTitle: 'Engineering Mathematics', section: 'RE_B(3C)', teacher: 'NRM', room: 'KT-217', isRetake: true, isNotTaken: false, subSection: null },
-  { id: 'sun-retake-mat211', day: 'Sunday', startTime: '08:30 AM', endTime: '10:00 AM', startMinutes: 510, endMinutes: 600, courseCode: 'MAT211', courseTitle: 'Engineering Mathematics', section: 'RE_B(3C)', teacher: 'NRM', room: 'ANX1-208', isRetake: true, isNotTaken: false, subSection: null },
-  { id: 'sun-aol101', day: 'Sunday', startTime: '08:30 AM', endTime: '10:00 AM', startMinutes: 510, endMinutes: 600, courseCode: 'AOL101', courseTitle: 'Art of Living', section: '69_P', teacher: 'TBA', room: 'KT-217', isRetake: false, isNotTaken: true, subSection: null },
-  { id: 'sun-cse216', day: 'Sunday', startTime: '11:30 AM', endTime: '02:30 PM', startMinutes: 690, endMinutes: 870, courseCode: 'CSE216', courseTitle: 'Electronic Devices and Circuits Lab', section: '69_P', teacher: 'SRRS', room: 'SH-105 (E.C. & B.E. Lab)', isRetake: false, isNotTaken: false, subSection: '69_P1' },
-  { id: 'mon-cse221', day: 'Monday', startTime: '02:30 PM', endTime: '04:00 PM', startMinutes: 870, endMinutes: 960, courseCode: 'CSE221', courseTitle: 'Object Oriented Programming', section: '69_P', teacher: 'SRS', room: 'G1-027', isRetake: false, isNotTaken: false, subSection: null },
-  { id: 'mon-aol101', day: 'Monday', startTime: '04:00 PM', endTime: '05:30 PM', startMinutes: 960, endMinutes: 1050, courseCode: 'AOL101', courseTitle: 'Art of Living', section: '69_P', teacher: 'TBA', room: 'KT-224', isRetake: false, isNotTaken: true, subSection: null },
-  { id: 'tue-cse222', day: 'Tuesday', startTime: '11:30 AM', endTime: '02:30 PM', startMinutes: 690, endMinutes: 870, courseCode: 'CSE222', courseTitle: 'Object Oriented Programming Lab', section: '69_P', teacher: 'SRS', room: 'G1-013 (COM LAB)', isRetake: false, isNotTaken: false, subSection: '69_P2' },
-  { id: 'tue-cse221', day: 'Tuesday', startTime: '04:00 PM', endTime: '05:30 PM', startMinutes: 960, endMinutes: 1050, courseCode: 'CSE221', courseTitle: 'Object Oriented Programming', section: '69_P', teacher: 'SRS', room: 'KT-220', isRetake: false, isNotTaken: false, subSection: null },
-  { id: 'wed-cse222', day: 'Wednesday', startTime: '11:30 AM', endTime: '02:30 PM', startMinutes: 690, endMinutes: 870, courseCode: 'CSE222', courseTitle: 'Object Oriented Programming Lab', section: '69_P', teacher: 'SRS', room: 'G1-002 (COM LAB)', isRetake: false, isNotTaken: false, subSection: '69_P1' },
-  { id: 'wed-cse215', day: 'Wednesday', startTime: '04:00 PM', endTime: '05:30 PM', startMinutes: 960, endMinutes: 1050, courseCode: 'CSE215', courseTitle: 'Electronic Devices and Circuits', section: '69_P', teacher: 'SRRS', room: 'KT-306', isRetake: false, isNotTaken: false, subSection: null },
-  { id: 'thu-cse216', day: 'Thursday', startTime: '08:30 AM', endTime: '11:30 AM', startMinutes: 510, endMinutes: 690, courseCode: 'CSE216', courseTitle: 'Electronic Devices and Circuits Lab', section: '69_P', teacher: 'SRRS', room: 'KT-809 (E.C. & D.E. Lab)', isRetake: false, isNotTaken: false, subSection: '69_P2' },
-  { id: 'thu-cse215', day: 'Thursday', startTime: '11:30 AM', endTime: '01:00 PM', startMinutes: 690, endMinutes: 780, courseCode: 'CSE215', courseTitle: 'Electronic Devices and Circuits', section: '69_P', teacher: 'SRRS', room: 'KT-220', isRetake: false, isNotTaken: false, subSection: null },
+  { id: 'sun-aol101', day: 'Sunday', startTime: '08:30 AM', endTime: '10:00 AM', startMinutes: 510, endMinutes: 600, courseCode: 'AOL101', courseTitle: 'Art of Living', section: '69_P', teacher: 'TBA', room: 'KT-217', isRetake: false, subSection: null },
+  { id: 'sun-cse216', day: 'Sunday', startTime: '11:30 AM', endTime: '02:30 PM', startMinutes: 690, endMinutes: 870, courseCode: 'CSE216', courseTitle: 'Electronic Devices and Circuits Lab', section: '69_P', teacher: 'SRRS', room: 'SH-105 (E.C. & B.E. Lab)', isRetake: false, subSection: '69_P1' },
+  { id: 'mon-cse221', day: 'Monday', startTime: '02:30 PM', endTime: '04:00 PM', startMinutes: 870, endMinutes: 960, courseCode: 'CSE221', courseTitle: 'Object Oriented Programming', section: '69_P', teacher: 'SRS', room: 'G1-027', isRetake: false, subSection: null },
+  { id: 'mon-aol101', day: 'Monday', startTime: '04:00 PM', endTime: '05:30 PM', startMinutes: 960, endMinutes: 1050, courseCode: 'AOL101', courseTitle: 'Art of Living', section: '69_P', teacher: 'TBA', room: 'KT-224', isRetake: false, subSection: null },
+  { id: 'tue-cse222', day: 'Tuesday', startTime: '11:30 AM', endTime: '02:30 PM', startMinutes: 690, endMinutes: 870, courseCode: 'CSE222', courseTitle: 'Object Oriented Programming Lab', section: '69_P', teacher: 'SRS', room: 'G1-013 (COM LAB)', isRetake: false, subSection: '69_P2' },
+  { id: 'tue-cse221', day: 'Tuesday', startTime: '04:00 PM', endTime: '05:30 PM', startMinutes: 960, endMinutes: 1050, courseCode: 'CSE221', courseTitle: 'Object Oriented Programming', section: '69_P', teacher: 'SRS', room: 'KT-220', isRetake: false, subSection: null },
+  { id: 'wed-cse222', day: 'Wednesday', startTime: '11:30 AM', endTime: '02:30 PM', startMinutes: 690, endMinutes: 870, courseCode: 'CSE222', courseTitle: 'Object Oriented Programming Lab', section: '69_P', teacher: 'SRS', room: 'G1-002 (COM LAB)', isRetake: false, subSection: '69_P1' },
+  { id: 'wed-cse215', day: 'Wednesday', startTime: '04:00 PM', endTime: '05:30 PM', startMinutes: 960, endMinutes: 1050, courseCode: 'CSE215', courseTitle: 'Electronic Devices and Circuits', section: '69_P', teacher: 'SRRS', room: 'KT-306', isRetake: false, subSection: null },
+  { id: 'thu-cse216', day: 'Thursday', startTime: '08:30 AM', endTime: '11:30 AM', startMinutes: 510, endMinutes: 690, courseCode: 'CSE216', courseTitle: 'Electronic Devices and Circuits Lab', section: '69_P', teacher: 'SRRS', room: 'KT-809 (E.C. & D.E. Lab)', isRetake: false, subSection: '69_P2' },
+  { id: 'thu-cse215', day: 'Thursday', startTime: '11:30 AM', endTime: '01:00 PM', startMinutes: 690, endMinutes: 780, courseCode: 'CSE215', courseTitle: 'Electronic Devices and Circuits', section: '69_P', teacher: 'SRRS', room: 'KT-220', isRetake: false, subSection: null },
 ]
+
+// Extra sessions that only show in personal mode (tap the logo 5 times to switch it on or off).
+const PERSONAL_DATA: RoutineItem[] = [
+  { id: 'sat-retake-mat211', day: 'Saturday', startTime: '11:30 AM', endTime: '01:00 PM', startMinutes: 690, endMinutes: 780, courseCode: 'MAT211', courseTitle: 'Engineering Mathematics', section: 'RE_B(3C)', teacher: 'NRM', room: 'KT-217', isRetake: true, subSection: null },
+  { id: 'sun-retake-mat211', day: 'Sunday', startTime: '08:30 AM', endTime: '10:00 AM', startMinutes: 510, endMinutes: 600, courseCode: 'MAT211', courseTitle: 'Engineering Mathematics', section: 'RE_B(3C)', teacher: 'NRM', room: 'ANX1-208', isRetake: true, subSection: null },
+]
+
+// Personal settings, applied only in personal mode.
+const MY_SKIPPED_COURSES = ['AOL101'] // courses I didn't take
+const MY_SKIPPED_LABS = ['69_P2'] // lab sub-sections I'm not in
 
 // Returns today's key, or null on a day with no classes (Friday).
 function getToday(date = new Date()): (typeof DAYS)[number] | null {
@@ -52,9 +60,16 @@ function getToday(date = new Date()): (typeof DAYS)[number] | null {
   return DAYS.includes(day as (typeof DAYS)[number]) ? (day as (typeof DAYS)[number]) : null
 }
 
-// Classes that are shown greyed out and don't count towards "next up" or totals.
-function isInactive(item: RoutineItem) {
-  return item.isNotTaken || item.subSection === '69_P2'
+function isSkippedCourse(item: RoutineItem, personal: boolean) {
+  return personal && MY_SKIPPED_COURSES.includes(item.courseCode)
+}
+
+// Classes shown greyed out (personal mode only); they don't count towards "next up" or totals.
+function isInactive(item: RoutineItem, personal: boolean) {
+  return (
+    isSkippedCourse(item, personal) ||
+    (personal && !!item.subSection && MY_SKIPPED_LABS.includes(item.subSection))
+  )
 }
 
 export default function Page() {
@@ -63,6 +78,9 @@ export default function Page() {
   const [dark, setDark] = useState(true)
   const [isMounted, setIsMounted] = useState(false)
   const [selectedSection, setSelectedSection] = useState('69_P')
+  const [personal, setPersonal] = useState(false)
+  const tapCount = useRef(0)
+  const tapTimer = useRef<number | undefined>(undefined)
 
   // Splash Screen State
   const [showSplash, setShowSplash] = useState(true)
@@ -76,6 +94,7 @@ export default function Page() {
 
     const savedSection = window.localStorage.getItem('routine-section')
     if (savedSection && SECTIONS.includes(savedSection)) setSelectedSection(savedSection)
+    if (window.localStorage.getItem('routine-personal') === '1') setPersonal(true)
 
     setIsMounted(true)
     const timer = window.setInterval(() => setNow(new Date()), 1000)
@@ -91,6 +110,21 @@ export default function Page() {
     }
   }, [])
 
+  // Tap the logo 5 times quickly to switch personal mode on or off.
+  const handleLogoTap = () => {
+    tapCount.current += 1
+    window.clearTimeout(tapTimer.current)
+    tapTimer.current = window.setTimeout(() => {
+      tapCount.current = 0
+    }, 1500)
+    if (tapCount.current >= 5) {
+      tapCount.current = 0
+      const next = !personal
+      setPersonal(next)
+      window.localStorage.setItem('routine-personal', next ? '1' : '0')
+    }
+  }
+
   const chooseSection = (section: string) => {
     if (!SECTIONS.includes(section)) return
     setSelectedSection(section)
@@ -99,26 +133,26 @@ export default function Page() {
 
   const dayClasses = useMemo(
     () =>
-      ROUTINE_DATA
+      (personal ? [...ROUTINE_DATA, ...PERSONAL_DATA] : ROUTINE_DATA)
         .filter((item) => item.day === FULL_DAYS[selectedDay] && (item.section === selectedSection || item.isRetake))
         .sort((a, b) => a.startMinutes - b.startMinutes),
-    [selectedDay, selectedSection]
+    [selectedDay, selectedSection, personal]
   )
 
   const sectionHasData = useMemo(
-    () => ROUTINE_DATA.some((item) => !item.isRetake && item.section === selectedSection),
+    () => ROUTINE_DATA.some((item) => item.section === selectedSection),
     [selectedSection]
   )
 
   const totalDurationMinutes = dayClasses
-    .filter((item) => !isInactive(item))
+    .filter((item) => !isInactive(item, personal))
     .reduce((total, item) => total + item.endMinutes - item.startMinutes, 0)
   const totalDurationLabel = `Total: ${Math.floor(totalDurationMinutes / 60)}h ${totalDurationMinutes % 60}m`
-  const regularCount = dayClasses.filter((item) => !item.isRetake && !item.isNotTaken).length
+  const regularCount = dayClasses.filter((item) => !item.isRetake && !isSkippedCourse(item, personal)).length
   const retakeCount = dayClasses.filter((item) => item.isRetake).length
   const currentMinutes = now ? now.getHours() * 60 + now.getMinutes() : -1
   const isViewingToday = isMounted && now !== null && selectedDay === getToday(now)
-  const activeClasses = dayClasses.filter((item) => !isInactive(item))
+  const activeClasses = dayClasses.filter((item) => !isInactive(item, personal))
   // Only compare against the clock when the selected day is today; otherwise show the day's first class.
   const upcomingClass = isViewingToday
     ? activeClasses.find((item) => item.startMinutes > currentMinutes)
@@ -154,12 +188,15 @@ export default function Page() {
         <div className="mx-auto min-h-screen max-w-5xl px-4 py-5 sm:px-6 sm:py-8">
           <header className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <div className="flex size-10 items-center justify-center rounded-2xl bg-cyan-400 text-slate-950 shadow-lg shadow-cyan-400/20">
+              <div
+                onClick={handleLogoTap}
+                className="flex size-10 cursor-default select-none items-center justify-center rounded-2xl bg-cyan-400 text-slate-950 shadow-lg shadow-cyan-400/20"
+              >
                 <CalendarDays />
               </div>
               <div>
                 <p className="text-lg font-semibold tracking-tight">Routine</p>
-                <p className="text-xs text-slate-600 dark:text-slate-400">CSE · Batch 69</p>
+                <p className="text-xs text-slate-600 dark:text-slate-400">CSE · Batch 69{personal ? ' · Personal' : ''}</p>
               </div>
             </div>
             <button
@@ -199,12 +236,13 @@ export default function Page() {
                 </div>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-3 lg:grid-cols-1">
+            <div className={personal ? 'grid grid-cols-2 gap-3 lg:grid-cols-1' : 'grid gap-3'}>
               <div className="rounded-3xl border border-slate-200 dark:border-white/10 bg-white dark:bg-white/[0.04] p-5">
                 <Users className="text-cyan-700 dark:text-cyan-300" />
                 <p className="mt-5 text-3xl font-semibold">{regularCount}</p>
                 <p className="text-sm text-slate-600 dark:text-slate-400">regular classes</p>
               </div>
+              {personal && (
               <div className="rounded-3xl border border-amber-300/60 bg-amber-50 p-5 dark:border-amber-300/20 dark:bg-amber-300/[0.06]">
                 <div className="flex items-center gap-2">
                   <span className="size-2 rounded-full bg-amber-300" />
@@ -213,6 +251,7 @@ export default function Page() {
                 <p className="mt-5 text-3xl font-semibold">{retakeCount}</p>
                 <p className="text-sm text-slate-600 dark:text-slate-400">MAT211 session</p>
               </div>
+              )}
             </div>
           </section>
 
@@ -283,7 +322,7 @@ export default function Page() {
 
             {!sectionHasData && (
               <div className="mb-3 rounded-2xl border border-amber-400/50 bg-amber-100 px-4 py-3 text-sm text-amber-900 dark:border-amber-300/20 dark:bg-amber-300/[0.06] dark:text-amber-200">
-                No regular routine has been added for {selectedSection} yet. Only the MAT211 retake sessions are shown.
+                No regular routine has been added for {selectedSection} yet.{personal ? ' Only your personal sessions are shown.' : ''}
               </div>
             )}
 
@@ -293,8 +332,8 @@ export default function Page() {
                 const gap = previous ? item.startMinutes - previous.endMinutes : 0
                 const durationHours = Math.floor(gap / 60)
                 const durationMins = gap % 60
-                const inactive = isInactive(item)
-                const skippedLabel = item.isNotTaken ? 'Not registered' : item.subSection === '69_P2' ? 'P2 Lab (skipped)' : ''
+                const inactive = isInactive(item, personal)
+                const skippedLabel = isSkippedCourse(item, personal) ? 'Not registered' : inactive ? `${item.subSection} Lab (skipped)` : ''
 
                 return (
                   <Fragment key={item.id}>
