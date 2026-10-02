@@ -110,14 +110,20 @@ export default function Page() {
     if (window.localStorage.getItem('routine-personal') === '1') setPersonal(true)
 
     setIsMounted(true)
-    const timer = window.setInterval(() => setNow(new Date()), 1000)
+    // The clock only shows hours and minutes, so tick once per minute (on the minute) instead of every second.
+    let clockTimer: number
+    const tick = () => {
+      setNow(new Date())
+      clockTimer = window.setTimeout(tick, 60000 - (Date.now() % 60000) + 50)
+    }
+    clockTimer = window.setTimeout(tick, 60000 - (Date.now() % 60000) + 50)
 
     // Trigger splash fade out at 1.4s, completely unmount at 1.9s
     const fadeTimer = window.setTimeout(() => setIsSplashFading(true), 1400)
     const exitTimer = window.setTimeout(() => setShowSplash(false), 1900)
 
     return () => {
-      window.clearInterval(timer)
+      window.clearTimeout(clockTimer)
       window.clearTimeout(fadeTimer)
       window.clearTimeout(exitTimer)
     }
@@ -309,7 +315,7 @@ export default function Page() {
                   key={day}
                   onClick={() => setSelectedDay(day)}
                   aria-current={isToday ? 'date' : undefined}
-                  className={`relative min-w-[58px] rounded-2xl px-4 py-3 text-sm font-semibold transition ${
+                  className={`relative min-w-[58px] rounded-full px-4 py-3 text-sm font-semibold transition ${
                     selectedDay === day
                       ? 'glass glass-active text-slate-950'
                       : 'glass glass-hover text-slate-600 dark:text-slate-400'
