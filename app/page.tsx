@@ -60,6 +60,19 @@ function getToday(date = new Date()): (typeof DAYS)[number] | null {
   return DAYS.includes(day as (typeof DAYS)[number]) ? (day as (typeof DAYS)[number]) : null
 }
 
+// Dates for the Sat–Thu week shown in the day tabs (on Friday it shows the coming week).
+function getWeekDates(todayKey: string) {
+  if (!todayKey) return null
+  const start = new Date(todayKey)
+  const sinceSat = (start.getDay() + 1) % 7 // Sat=0 … Thu=5, Fri=6
+  start.setDate(start.getDate() - (sinceSat === 6 ? -1 : sinceSat))
+  return DAYS.map((_, i) => {
+    const d = new Date(start)
+    d.setDate(start.getDate() + i)
+    return d
+  })
+}
+
 function isSkippedCourse(item: RoutineItem, personal: boolean) {
   return personal && MY_SKIPPED_COURSES.includes(item.courseCode)
 }
@@ -151,6 +164,12 @@ export default function Page() {
   const regularCount = dayClasses.filter((item) => !item.isRetake && !isSkippedCourse(item, personal)).length
   const retakeCount = dayClasses.filter((item) => item.isRetake).length
   const currentMinutes = now ? now.getHours() * 60 + now.getMinutes() : -1
+  const todayKey = now ? now.toDateString() : ''
+  const weekDates = useMemo(() => getWeekDates(todayKey), [todayKey])
+  const selectedDate = weekDates ? weekDates[DAYS.indexOf(selectedDay)] : null
+  const selectedDateLabel = selectedDate
+    ? selectedDate.toLocaleDateString('en-US', { day: 'numeric', month: 'short' })
+    : ''
   const isViewingToday = isMounted && now !== null && selectedDay === getToday(now)
   const activeClasses = dayClasses.filter((item) => !isInactive(item, personal))
   // Only compare against the clock when the selected day is today; otherwise show the day's first class.
@@ -184,8 +203,8 @@ export default function Page() {
       )}
 
       {/* Main Routine App View */}
-      <main className={dark ? 'dark min-h-screen bg-[#08111b] text-slate-100' : 'min-h-screen bg-slate-50 text-slate-900'}>
-        <div className="mx-auto min-h-screen max-w-5xl px-4 py-5 sm:px-6 sm:py-8">
+      <main className={dark ? 'dark glass-scene min-h-screen text-slate-100' : 'glass-scene min-h-screen text-slate-900'}>
+        <div className="relative z-10 mx-auto min-h-screen max-w-5xl px-4 py-5 sm:px-6 sm:py-8">
           <header className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <div
@@ -202,17 +221,17 @@ export default function Page() {
             <button
               aria-label="Toggle dark mode"
               onClick={() => setDark(!dark)}
-              className="flex size-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-100 dark:border-white/10 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10"
+              className="glass glass-hover flex size-10 items-center justify-center rounded-full text-slate-600 transition dark:text-slate-300"
             >
               {dark ? <Sun /> : <Moon />}
             </button>
           </header>
 
           <section className="mt-8 grid gap-4 lg:grid-cols-[1fr_280px]">
-            <div className="rounded-[2rem] border border-cyan-200 bg-gradient-to-br from-cyan-50 via-sky-50 to-white dark:border-cyan-300/10 dark:from-[#102b3c] dark:via-[#0b1c2a] dark:to-[#0a1722] p-5 shadow-xl shadow-slate-300/40 dark:shadow-2xl dark:shadow-black/20 sm:p-7">
+            <div className="glass glass-hero rounded-[2rem] p-5 sm:p-7">
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <p className="text-sm font-medium text-cyan-700 dark:text-cyan-300">{FULL_DAYS[selectedDay]}</p>
+                  <p className="text-sm font-medium text-cyan-700 dark:text-cyan-300">{FULL_DAYS[selectedDay]}{selectedDateLabel ? ` · ${selectedDateLabel}` : ''}</p>
                   <h1 className="mt-2 text-3xl font-semibold tracking-tight sm:text-4xl">
                     Your classes, <span className="text-cyan-700 dark:text-cyan-300">at a glance.</span>
                   </h1>
@@ -237,13 +256,13 @@ export default function Page() {
               </div>
             </div>
             <div className={personal ? 'grid grid-cols-2 gap-3 lg:grid-cols-1' : 'grid gap-3'}>
-              <div className="rounded-3xl border border-slate-200 dark:border-white/10 bg-white dark:bg-white/[0.04] p-5">
+              <div className="glass rounded-3xl p-5">
                 <Users className="text-cyan-700 dark:text-cyan-300" />
                 <p className="mt-5 text-3xl font-semibold">{regularCount}</p>
                 <p className="text-sm text-slate-600 dark:text-slate-400">regular classes</p>
               </div>
               {personal && (
-              <div className="rounded-3xl border border-amber-300/60 bg-amber-50 p-5 dark:border-amber-300/20 dark:bg-amber-300/[0.06]">
+              <div className="glass glass-amber rounded-3xl p-5">
                 <div className="flex items-center gap-2">
                   <span className="size-2 rounded-full bg-amber-300" />
                   <p className="text-xs font-semibold uppercase tracking-widest text-amber-700 dark:text-amber-200">Retake</p>
@@ -255,7 +274,7 @@ export default function Page() {
             </div>
           </section>
 
-          <section className="mt-8 rounded-3xl border border-slate-200 dark:border-white/10 bg-white dark:bg-white/[0.04] p-4 sm:flex sm:items-center sm:justify-between sm:gap-5">
+          <section className="glass mt-8 rounded-3xl p-4 sm:flex sm:items-center sm:justify-between sm:gap-5">
             <div className="mb-3 flex items-center gap-2 sm:mb-0">
               <Search className="text-cyan-700 dark:text-cyan-300" />
               <div>
@@ -271,7 +290,7 @@ export default function Page() {
                 id="section-select"
                 value={selectedSection}
                 onChange={(event) => chooseSection(event.target.value)}
-                className="w-full appearance-none rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-medium text-slate-900 outline-none ring-cyan-400 dark:border-white/10 dark:bg-slate-950/40 dark:text-slate-100 dark:ring-cyan-300 transition focus:ring-2"
+                className="w-full appearance-none rounded-2xl glass-input px-4 py-3 text-sm font-medium text-slate-900 outline-none ring-cyan-400 dark:text-slate-100 dark:ring-cyan-300 transition focus:ring-2"
               >
                 {SECTIONS.map((section) => (
                   <option key={section} value={section} className="bg-white text-slate-900 dark:bg-slate-900 dark:text-slate-100">
@@ -283,22 +302,25 @@ export default function Page() {
           </section>
 
           <nav aria-label="Select a day" className="mt-5 flex gap-2 overflow-x-auto pb-1">
-            {DAYS.map((day) => (
-              <button
-                key={day}
-                onClick={() => setSelectedDay(day)}
-                className={`min-w-[58px] rounded-2xl px-4 py-3 text-sm font-semibold transition ${
-                  selectedDay === day
-                    ? 'bg-cyan-300 text-slate-950 shadow-lg shadow-cyan-300/20'
-                    : 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-100 dark:border-white/10 dark:bg-white/[0.04] dark:text-slate-400 dark:hover:bg-white/[0.08]'
-                }`}
-              >
-                <span className="block text-xs opacity-60">
-                  {isMounted && now !== null && day === getToday(now) ? 'Today' : FULL_DAYS[day].slice(0, 3)}
-                </span>
-                {day}
-              </button>
-            ))}
+            {DAYS.map((day, i) => {
+              const isToday = isMounted && now !== null && day === getToday(now)
+              return (
+                <button
+                  key={day}
+                  onClick={() => setSelectedDay(day)}
+                  aria-current={isToday ? 'date' : undefined}
+                  className={`relative min-w-[58px] rounded-2xl px-4 py-3 text-sm font-semibold transition ${
+                    selectedDay === day
+                      ? 'glass glass-active text-slate-950'
+                      : 'glass glass-hover text-slate-600 dark:text-slate-400'
+                  }`}
+                >
+                  <span className="block text-xs opacity-70">{FULL_DAYS[day].slice(0, 3)}</span>
+                  <span className="block text-base tabular-nums">{weekDates ? weekDates[i].getDate() : '·'}</span>
+                  {isToday && <span aria-label="Today" className="absolute right-1.5 top-1.5 size-1.5 rounded-full bg-current" />}
+                </button>
+              )
+            })}
           </nav>
 
           <section className="mt-5">
@@ -321,7 +343,7 @@ export default function Page() {
             </div>
 
             {!sectionHasData && (
-              <div className="mb-3 rounded-2xl border border-amber-400/50 bg-amber-100 px-4 py-3 text-sm text-amber-900 dark:border-amber-300/20 dark:bg-amber-300/[0.06] dark:text-amber-200">
+              <div className="glass glass-amber mb-3 rounded-2xl px-4 py-3 text-sm text-amber-900 dark:text-amber-200">
                 No regular routine has been added for {selectedSection} yet.{personal ? ' Only your personal sessions are shown.' : ''}
               </div>
             )}
@@ -339,7 +361,7 @@ export default function Page() {
                   <Fragment key={item.id}>
                     {gap > 0 && previous && (
                       <div
-                        className="break-stripes flex items-center justify-between rounded-2xl border border-slate-200 px-4 py-3 text-slate-600 dark:text-slate-400 dark:border-white/5"
+                        className="break-stripes flex items-center justify-between rounded-2xl px-4 py-3 text-slate-600 dark:text-slate-400"
                       >
                         <div>
                           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-700 dark:text-slate-300">Break Time</p>
@@ -352,15 +374,15 @@ export default function Page() {
                     )}
                     <article
                       key={item.id}
-                      className={`group flex items-stretch gap-3 rounded-3xl border p-4 transition hover:-translate-y-0.5 sm:gap-5 sm:p-5 ${
+                      className={`glass group flex items-stretch gap-3 rounded-3xl p-4 transition hover:-translate-y-0.5 sm:gap-5 sm:p-5 ${
                         inactive
-                          ? 'border-slate-200 bg-slate-100 opacity-50 grayscale dark:border-white/10 dark:bg-white/[0.02]'
+                          ? 'glass-dim opacity-50 grayscale'
                           : item.isRetake
-                          ? 'border-amber-400/50 bg-amber-100 dark:border-amber-300/30 dark:bg-amber-300/[0.07]'
-                          : 'border-slate-200 bg-white hover:border-cyan-400/40 dark:border-white/10 dark:bg-white/[0.04] dark:hover:border-cyan-300/20'
+                          ? 'glass-amber'
+                          : 'glass-hover'
                       }`}
                     >
-                      <div className="flex w-[58px] shrink-0 flex-col justify-center border-r border-slate-200 dark:border-white/10 pr-3 sm:w-[88px] sm:pr-5">
+                      <div className="flex w-[58px] shrink-0 flex-col justify-center border-r border-slate-400/25 dark:border-white/10 pr-3 sm:w-[88px] sm:pr-5">
                         <span className="font-mono text-sm font-semibold tabular-nums text-slate-800 dark:text-slate-200">{item.startTime}</span>
                         <span className="my-1 h-px w-4 bg-slate-600" />
                         <span className="font-mono text-xs tabular-nums text-slate-500">{item.endTime}</span>
@@ -376,13 +398,13 @@ export default function Page() {
                                 ? 'bg-slate-500/20 text-slate-600 dark:text-slate-400'
                                 : item.isRetake
                                 ? 'bg-amber-300 text-amber-950'
-                                : 'bg-cyan-100 text-cyan-800 dark:bg-cyan-300/10 dark:text-cyan-200'
+                                : 'bg-cyan-400/20 text-cyan-800 dark:bg-cyan-300/10 dark:text-cyan-200'
                             }`}
                           >
                             {inactive ? skippedLabel : item.isRetake ? 'Retake' : `Section ${item.section}`}
                           </span>
                           {item.subSection && (
-                            <span className="rounded-full bg-slate-200 px-2 py-0.5 dark:bg-white/10 text-[10px] font-semibold text-slate-600 dark:text-slate-400">
+                            <span className="rounded-full bg-white/50 px-2 py-0.5 dark:bg-white/10 text-[10px] font-semibold text-slate-600 dark:text-slate-400">
                               {item.subSection}
                             </span>
                           )}
@@ -407,7 +429,7 @@ export default function Page() {
             </div>
           </section>
 
-          <footer className="mt-10 flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 dark:border-white/10 pt-5 text-xs text-slate-500">
+          <footer className="mt-10 flex flex-wrap items-center justify-between gap-3 border-t border-slate-400/25 dark:border-white/10 pt-5 text-xs text-slate-500">
             <span>Routine V3.1 · Effective 26 September 2026</span>
             <span className="inline-flex items-center gap-1.5">
               <span className="size-1.5 rounded-full bg-emerald-400" /> Live schedule
