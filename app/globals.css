@@ -227,15 +227,16 @@
 
 /* ==========================================================================
    LIQUID GLASS THEME (inspired by the Liquify look)
-   A pre-blurred artwork backdrop (public/bg.jpg) + soft translucent panels.
-   There is deliberately NO backdrop-filter anywhere: the blur is baked into
-   the image, so it looks the same but costs nothing on low-end phones.
+   A solid ambient backdrop (soft blue-grey in light, true AMOLED black in
+   dark) + soft translucent panels. There is deliberately NO backdrop-filter
+   and no background image: it costs nothing on low-end phones and pure black
+   pixels are switched off on OLED screens.
    Every variant is defined for light AND dark with matching specificity.
    ========================================================================== */
 
 .glass-scene {
   position: relative;
-  background: #dfeaf5;
+  background: #e7edf4;
 }
 .glass-scene::before {
   content: '';
@@ -244,17 +245,14 @@
   z-index: 0;
   pointer-events: none;
   transform: translateZ(0);
-  background:
-    linear-gradient(rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0.66)),
-    url('/bg.jpg') center / cover no-repeat;
+  /* one very soft accent glow at the top, so the glass has something to catch */
+  background: radial-gradient(120% 60% at 50% -10%, rgba(94, 234, 212, 0.22), rgba(94, 234, 212, 0) 70%);
 }
 .glass-scene.dark {
-  background: #060d14;
+  background: #000000;
 }
 .glass-scene.dark::before {
-  background:
-    linear-gradient(rgba(4, 10, 16, 0.5), rgba(4, 10, 16, 0.64)),
-    url('/bg.jpg') center / cover no-repeat;
+  background: radial-gradient(120% 60% at 50% -10%, rgba(45, 212, 191, 0.09), rgba(45, 212, 191, 0) 70%);
 }
 
 /* Base panel */
@@ -267,11 +265,11 @@
 }
 .dark .glass {
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0) 45%),
-    rgba(8, 14, 22, 0.5);
+    linear-gradient(180deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.02) 55%),
+    rgba(20, 24, 30, 0.72);
   border-color: rgba(255, 255, 255, 0.12);
   box-shadow:
-    0 6px 22px rgba(0, 0, 0, 0.35),
+    0 6px 22px rgba(0, 0, 0, 0.6),
     inset 0 1px 0 rgba(255, 255, 255, 0.14);
 }
 
@@ -281,8 +279,8 @@
 }
 .dark .glass-hero {
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0) 45%),
-    linear-gradient(135deg, rgba(45, 212, 191, 0.26), rgba(8, 14, 22, 0.5));
+    linear-gradient(180deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.02) 55%),
+    linear-gradient(135deg, rgba(45, 212, 191, 0.24), rgba(20, 24, 30, 0.72));
 }
 
 /* Amber (retake / notices) */
@@ -293,7 +291,7 @@
 .dark .glass-amber {
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0) 45%),
-    linear-gradient(135deg, rgba(251, 191, 36, 0.24), rgba(8, 14, 22, 0.5));
+    linear-gradient(135deg, rgba(251, 191, 36, 0.22), rgba(20, 24, 30, 0.72));
   border-color: rgba(252, 211, 77, 0.3);
 }
 
@@ -319,7 +317,7 @@
   box-shadow: none;
 }
 .dark .glass-dim {
-  background: rgba(8, 14, 22, 0.3);
+  background: rgba(20, 24, 30, 0.4);
   box-shadow: none;
 }
 
@@ -340,7 +338,7 @@
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.95);
 }
 .dark .glass-input {
-  background: rgba(8, 14, 22, 0.5);
+  background: rgba(20, 24, 30, 0.72);
   border-color: rgba(255, 255, 255, 0.14);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
 }
