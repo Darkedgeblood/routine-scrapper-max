@@ -198,7 +198,7 @@ export default function Page() {
       {/* Launch Splash Screen Overlay */}
       {showSplash && (
         <div
-          className={`fixed inset-0 z-50 flex flex-col items-center justify-center bg-[#030712] select-none ${
+          className={`fixed inset-0 z-50 flex flex-col items-center justify-center bg-black select-none ${
             isSplashFading ? 'animate-splash-fade' : ''
           }`}
         >
