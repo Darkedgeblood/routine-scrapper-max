@@ -273,27 +273,9 @@
     inset 0 1px 0 rgba(255, 255, 255, 0.14);
 }
 
-/* Hero card: a touch of accent colour */
-.glass-hero {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.86), rgba(153, 246, 228, 0.5));
-}
-.dark .glass-hero {
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.02) 55%),
-    linear-gradient(135deg, rgba(45, 212, 191, 0.24), rgba(20, 24, 30, 0.72));
-}
-
-/* Amber (retake / notices) */
-.glass-amber {
-  background: linear-gradient(135deg, rgba(253, 230, 138, 0.7), rgba(253, 230, 138, 0.35));
-  border-color: rgba(251, 191, 36, 0.55);
-}
-.dark .glass-amber {
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0) 45%),
-    linear-gradient(135deg, rgba(251, 191, 36, 0.22), rgba(20, 24, 30, 0.72));
-  border-color: rgba(252, 211, 77, 0.3);
-}
+/* Hero + retake tiles use the same neutral glass as every other tile.
+   .glass-hero / .glass-amber stay as hooks; the retake accent now lives only
+   in the amber badge, dot and text, not in the tile fill. */
 
 /* Selected day pill: solid accent with a glow */
 .glass-active {
