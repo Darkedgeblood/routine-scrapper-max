@@ -33,10 +33,10 @@ export const SECTIONS = ['69_A', '69_B', '69_C', '69_D', '69_E', '69_F', '69_G',
 // Teacher initials -> full names. Fill these in and the app shows the full
 // name everywhere (with the initials as a hover tooltip until you do).
 export const TEACHERS: Record<string, string> = {
-  SRRS: '',
-  SRS: '',
-  IEA: '',
-  NRM: '',
+  SRRS: 'Sadikur Rahman Sadik',
+  SRS: 'Shahariar Sarkar',
+  IEA: 'Ishtiaque Ahmed',
+  NRM: 'Noor Muhammad',
 }
 
 // The class routine everyone sees.
