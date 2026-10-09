@@ -1,66 +1,29 @@
 'use client'
 
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
-import { CalendarDays, ChevronRight, Coffee, MapPin, Moon, Search, Sun, Users, Zap } from 'lucide-react'
-import { Archivo_Black } from 'next/font/google' // <-- ADD THIS
+import { CalendarDays, ChevronDown, Coffee, MapPin, Moon, Search, Sun, Users, Zap } from 'lucide-react'
+import { Archivo_Black } from 'next/font/google'
+
+import {
+  DAYS,
+  FULL_DAYS,
+  MY_SKIPPED_COURSES,
+  MY_SKIPPED_LABS,
+  PERSONAL_DATA,
+  ROUTINE_DATA,
+  SECTIONS,
+  TEACHERS,
+  type RoutineItem,
+} from '@/lib/routine-data'
 
 // Initialize Archivo Black (it only has a '400' weight)
-const archivoBlack = Archivo_Black({ 
-  weight: '400', 
-  subsets: ['latin'] 
-}) // <-- ADD THIS
+const archivoBlack = Archivo_Black({
+  weight: '400',
+  subsets: ['latin'],
+})
 
-type RoutineItem = {
-// ... rest of your code stays the same
-  id: string
-  day: string
-  startTime: string
-  endTime: string
-  courseCode: string
-  courseTitle: string
-  room: string
-  teacher: string
-  section: string
-  subSection?: string | null
-  startMinutes: number
-  endMinutes: number
-  isRetake: boolean
-}
-
-const DAYS = ['Sat', 'Sun', 'Mon', 'Tue', 'Wed', 'Thu'] as const
-const FULL_DAYS: Record<string, string> = {
-  Sat: 'Saturday',
-  Sun: 'Sunday',
-  Mon: 'Monday',
-  Tue: 'Tuesday',
-  Wed: 'Wednesday',
-  Thu: 'Thursday',
-}
-const SECTIONS = ['69_A', '69_B', '69_C', '69_D', '69_E', '69_F', '69_G', '69_H', '69_I', '69_J', '69_K', '69_L', '69_M', '69_N', '69_O', '69_P']
-
-// The class routine everyone sees.
-const ROUTINE_DATA: RoutineItem[] = [
-  { id: 'sun-aol101', day: 'Sunday', startTime: '08:30 AM', endTime: '10:00 AM', startMinutes: 510, endMinutes: 600, courseCode: 'AOL101', courseTitle: 'Art of Living', section: '69_P', teacher: 'IEA', room: 'KT-217', isRetake: false, subSection: null },
-  { id: 'sun-cse216', day: 'Sunday', startTime: '11:30 AM', endTime: '02:30 PM', startMinutes: 690, endMinutes: 870, courseCode: 'CSE216', courseTitle: 'Electronic Devices and Circuits Lab', section: '69_P', teacher: 'SRRS', room: 'SH-105 (E.C. & B.E. Lab)', isRetake: false, subSection: '69_P1' },
-  { id: 'mon-cse221', day: 'Monday', startTime: '02:30 PM', endTime: '04:00 PM', startMinutes: 870, endMinutes: 960, courseCode: 'CSE221', courseTitle: 'Object Oriented Programming', section: '69_P', teacher: 'SRS', room: 'G1-027', isRetake: false, subSection: null },
-  { id: 'mon-aol101', day: 'Monday', startTime: '04:00 PM', endTime: '05:30 PM', startMinutes: 960, endMinutes: 1050, courseCode: 'AOL101', courseTitle: 'Art of Living', section: '69_P', teacher: 'IEA', room: 'KT-224', isRetake: false, subSection: null },
-  { id: 'tue-cse222', day: 'Tuesday', startTime: '11:30 AM', endTime: '02:30 PM', startMinutes: 690, endMinutes: 870, courseCode: 'CSE222', courseTitle: 'Object Oriented Programming Lab', section: '69_P', teacher: 'SRS', room: 'G1-013 (COM LAB)', isRetake: false, subSection: '69_P2' },
-  { id: 'tue-cse221', day: 'Tuesday', startTime: '04:00 PM', endTime: '05:30 PM', startMinutes: 960, endMinutes: 1050, courseCode: 'CSE221', courseTitle: 'Object Oriented Programming', section: '69_P', teacher: 'SRS', room: 'KT-220', isRetake: false, subSection: null },
-  { id: 'wed-cse215', day: 'Wednesday', startTime: '08:30 AM', endTime: '10:00 AM', startMinutes: 510, endMinutes: 600, courseCode: 'CSE215', courseTitle: 'Electronic Devices and Circuits', section: '69_P', teacher: 'SRRS', room: 'KT-218', isRetake: false, subSection: null },
-  { id: 'wed-cse222', day: 'Wednesday', startTime: '11:30 AM', endTime: '02:30 PM', startMinutes: 690, endMinutes: 870, courseCode: 'CSE222', courseTitle: 'Object Oriented Programming Lab', section: '69_P', teacher: 'SRS', room: 'G1-002 (COM LAB)', isRetake: false, subSection: '69_P1' },
-  { id: 'thu-cse216', day: 'Thursday', startTime: '08:30 AM', endTime: '11:30 AM', startMinutes: 510, endMinutes: 690, courseCode: 'CSE216', courseTitle: 'Electronic Devices and Circuits Lab', section: '69_P', teacher: 'SRRS', room: 'KT-809 (E.C. & D.E. Lab)', isRetake: false, subSection: '69_P2' },
-  { id: 'thu-cse215', day: 'Thursday', startTime: '11:30 AM', endTime: '01:00 PM', startMinutes: 690, endMinutes: 780, courseCode: 'CSE215', courseTitle: 'Electronic Devices and Circuits', section: '69_P', teacher: 'SRRS', room: 'KT-220', isRetake: false, subSection: null },
-]
-
-// Extra sessions that only show in personal mode (tap the logo 5 times to switch it on or off).
-const PERSONAL_DATA: RoutineItem[] = [
-  { id: 'sat-retake-mat211', day: 'Saturday', startTime: '11:30 AM', endTime: '01:00 PM', startMinutes: 690, endMinutes: 780, courseCode: 'MAT211', courseTitle: 'Engineering Mathematics', section: 'RE_B(3C)', teacher: 'NRM', room: 'KT-217', isRetake: true, subSection: null },
-  { id: 'sun-retake-mat211', day: 'Sunday', startTime: '08:30 AM', endTime: '10:00 AM', startMinutes: 510, endMinutes: 600, courseCode: 'MAT211', courseTitle: 'Engineering Mathematics', section: 'RE_B(3C)', teacher: 'NRM', room: 'ANX1-208', isRetake: true, subSection: null },
-]
-
-// Personal settings, applied only in personal mode.
-const MY_SKIPPED_COURSES = ['AOL101'] // courses I didn't take
-const MY_SKIPPED_LABS = ['69_P2'] // lab sub-sections I'm not in
+// Shared focus ring for every interactive element.
+const FOCUS_RING = 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500/70 dark:focus-visible:ring-cyan-300/70'
 
 // Returns today's key, or null on a day with no classes (Friday).
 function getToday(date = new Date()): (typeof DAYS)[number] | null {
@@ -68,10 +31,9 @@ function getToday(date = new Date()): (typeof DAYS)[number] | null {
   return DAYS.includes(day as (typeof DAYS)[number]) ? (day as (typeof DAYS)[number]) : null
 }
 
-// Dates for the Sat–Thu week shown in the day tabs (on Friday it shows the coming week).
-function getWeekDates(todayKey: string) {
-  if (!todayKey) return null
-  const start = new Date(todayKey)
+// Dates for the Sat-Thu week shown in the day tabs (on Friday it shows the coming week).
+function getWeekDates(today: Date) {
+  const start = new Date(today)
   const sinceSat = (start.getDay() + 1) % 7 // Sat=0 … Thu=5, Fri=6
   start.setDate(start.getDate() - (sinceSat === 6 ? -1 : sinceSat))
   return DAYS.map((_, i) => {
@@ -93,6 +55,10 @@ function isInactive(item: RoutineItem, personal: boolean) {
   )
 }
 
+function teacherLabel(initials: string) {
+  return TEACHERS[initials] || initials
+}
+
 export default function Page() {
   const [selectedDay, setSelectedDay] = useState<(typeof DAYS)[number]>('Sat')
   const [now, setNow] = useState<Date | null>(null)
@@ -108,16 +74,24 @@ export default function Page() {
   const [isSplashFading, setIsSplashFading] = useState(false)
 
   useEffect(() => {
-    setNow(new Date())
     const today = getToday() ?? 'Sat'
-    setSelectedDay(today)
-    window.localStorage.setItem('routine-day', today)
+
+    // Restore the last-viewed day (falls back to today).
+    const savedDay = window.localStorage.getItem('routine-day')
+    setSelectedDay(savedDay && (DAYS as readonly string[]).includes(savedDay) ? (savedDay as (typeof DAYS)[number]) : today)
+
+    // Restore dark mode (defaults to dark).
+    const savedDark = window.localStorage.getItem('routine-dark')
+    const startDark = savedDark ? savedDark === '1' : true
+    setDark(startDark)
 
     const savedSection = window.localStorage.getItem('routine-section')
     if (savedSection && SECTIONS.includes(savedSection)) setSelectedSection(savedSection)
     if (window.localStorage.getItem('routine-personal') === '1') setPersonal(true)
 
+    setNow(new Date())
     setIsMounted(true)
+
     // The clock only shows hours and minutes, so tick once per minute (on the minute) instead of every second.
     let clockTimer: number
     const tick = () => {
@@ -152,6 +126,19 @@ export default function Page() {
     }
   }
 
+  const toggleDark = () => {
+    const next = !dark
+    setDark(next)
+    window.localStorage.setItem('routine-dark', next ? '1' : '0')
+    // Keep the browser UI/status bar color in sync with the scene.
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', next ? '#000000' : '#e7edf4')
+  }
+
+  const selectDay = (day: (typeof DAYS)[number]) => {
+    setSelectedDay(day)
+    window.localStorage.setItem('routine-day', day)
+  }
+
   const chooseSection = (section: string) => {
     if (!SECTIONS.includes(section)) return
     setSelectedSection(section)
@@ -166,6 +153,21 @@ export default function Page() {
     [selectedDay, selectedSection, personal]
   )
 
+  // How many active classes each day of the week has (drives the count under each day pill).
+  const weekCounts = useMemo(() => {
+    const source = personal ? [...ROUTINE_DATA, ...PERSONAL_DATA] : ROUTINE_DATA
+    const counts = {} as Record<(typeof DAYS)[number], number>
+    for (const day of DAYS) {
+      counts[day] = source.filter(
+        (item) =>
+          item.day === FULL_DAYS[day] &&
+          (item.section === selectedSection || item.isRetake) &&
+          !isInactive(item, personal)
+      ).length
+    }
+    return counts
+  }, [selectedSection, personal])
+
   const sectionHasData = useMemo(
     () => ROUTINE_DATA.some((item) => item.section === selectedSection),
     [selectedSection]
@@ -176,22 +178,54 @@ export default function Page() {
     .reduce((total, item) => total + item.endMinutes - item.startMinutes, 0)
   const totalDurationLabel = `Total: ${Math.floor(totalDurationMinutes / 60)}h ${totalDurationMinutes % 60}m`
   const regularCount = dayClasses.filter((item) => !item.isRetake && !isSkippedCourse(item, personal)).length
-  const retakeCount = dayClasses.filter((item) => item.isRetake).length
+  const retakeItems = dayClasses.filter((item) => item.isRetake)
+  const retakeCount = retakeItems.length
+  const retakeCourses = [...new Set(retakeItems.map((item) => item.courseCode))]
   const currentMinutes = now ? now.getHours() * 60 + now.getMinutes() : -1
-  const todayKey = now ? now.toDateString() : ''
-  const weekDates = useMemo(() => getWeekDates(todayKey), [todayKey])
+  const weekDates = useMemo(() => (now ? getWeekDates(now) : null), [now])
   const selectedDate = weekDates ? weekDates[DAYS.indexOf(selectedDay)] : null
   const selectedDateLabel = selectedDate
     ? selectedDate.toLocaleDateString('en-US', { day: 'numeric', month: 'short' })
     : ''
   const isViewingToday = isMounted && now !== null && selectedDay === getToday(now)
+  // Friday has no tab; the pills then show the coming week.
+  const isNextWeek = isMounted && now !== null && getToday(now) === null
   const activeClasses = dayClasses.filter((item) => !isInactive(item, personal))
+  const ongoingClass = isViewingToday
+    ? activeClasses.find((item) => item.startMinutes <= currentMinutes && currentMinutes < item.endMinutes)
+    : undefined
   // Only compare against the clock when the selected day is today; otherwise show the day's first class.
   const upcomingClass = isViewingToday
     ? activeClasses.find((item) => item.startMinutes > currentMinutes)
     : activeClasses[0]
   const upNextLabel = isViewingToday ? 'Next up' : 'First class'
   const upNextEmpty = isViewingToday && activeClasses.length > 0 ? 'No more classes' : 'No classes'
+
+  const upNextDetail = upcomingClass
+    ? `${upcomingClass.courseCode} · ${upcomingClass.startTime} - ${upcomingClass.endTime}`
+    : upNextEmpty
+  // A secondary line under "next up": live status when viewing today.
+  const upNextSub =
+    isViewingToday && now !== null
+      ? ongoingClass
+        ? `In session · ends ${ongoingClass.endTime}`
+        : upcomingClass
+        ? `Starts in ${formatCountdown(upcomingClass.startMinutes - currentMinutes)}`
+        : ''
+      : ''
+
+  // Live status shown in the footer dot.
+  const liveStatus = !isMounted || now === null
+    ? { dot: 'bg-slate-400', label: 'Live schedule', pulse: false }
+    : !isViewingToday
+    ? { dot: 'bg-slate-400', label: `Viewing ${FULL_DAYS[selectedDay]}`, pulse: false }
+    : ongoingClass
+    ? { dot: 'bg-emerald-400', label: `In session · ${ongoingClass.courseCode}`, pulse: true }
+    : upcomingClass
+    ? { dot: 'bg-amber-400', label: `Next class ${upcomingClass.startTime}`, pulse: false }
+    : activeClasses.length > 0
+    ? { dot: 'bg-slate-400', label: 'No more classes today', pulse: false }
+    : { dot: 'bg-slate-400', label: 'No classes today', pulse: false }
 
   return (
     <>
@@ -221,68 +255,78 @@ export default function Page() {
         <div className="relative z-10 mx-auto min-h-screen max-w-5xl px-4 py-5 sm:px-6 sm:py-8">
           <header className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <div
+              <button
+                type="button"
                 onClick={handleLogoTap}
-                className="flex size-10 cursor-default select-none items-center justify-center rounded-2xl bg-cyan-400 text-slate-950 shadow-lg shadow-cyan-400/20"
+                aria-label="Toggle personal mode"
+                className={`flex size-10 cursor-default select-none items-center justify-center rounded-2xl bg-cyan-400 text-slate-950 shadow-lg shadow-cyan-400/20 ${FOCUS_RING}`}
               >
                 <CalendarDays />
-              </div>
+              </button>
               <div>
                 <p className="text-lg font-semibold tracking-tight">Routine</p>
                 <p className="text-xs text-slate-600 dark:text-slate-400">CSE · Batch 69{personal ? ' · Personal' : ''}</p>
               </div>
             </div>
             <button
-              aria-label="Toggle dark mode"
-              onClick={() => setDark(!dark)}
-              className="glass glass-hover flex size-10 items-center justify-center rounded-full text-slate-600 transition dark:text-slate-300"
+              type="button"
+              aria-label={dark ? 'Switch to light mode' : 'Switch to dark mode'}
+              onClick={toggleDark}
+              className={`glass glass-hover flex size-10 items-center justify-center rounded-full text-slate-600 transition dark:text-slate-300 ${FOCUS_RING}`}
             >
               {dark ? <Sun /> : <Moon />}
             </button>
           </header>
 
           <section className="mt-8 grid gap-4 lg:grid-cols-[1fr_280px]">
-            <div className="glass glass-hero rounded-[2rem] p-5 sm:p-7">
+            <div className="glass rounded-[2rem] p-5 sm:p-7">
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <p className="text-sm font-medium text-cyan-700 dark:text-cyan-300">{FULL_DAYS[selectedDay]}{selectedDateLabel ? ` · ${selectedDateLabel}` : ''}</p>
+                  <p className="text-sm font-medium text-cyan-800 dark:text-cyan-300">{FULL_DAYS[selectedDay]}{selectedDateLabel ? ` · ${selectedDateLabel}` : ''}</p>
                   <h1 className={`mt-2 text-3xl tracking-tight sm:text-4xl ${archivoBlack.className}`}>
-                    Your classes, <span className="text-cyan-700 dark:text-cyan-300">at a glance.</span>
+                    Your classes, <span className="text-cyan-800 dark:text-cyan-300">at a glance.</span>
                   </h1>
                 </div>
-                <Zap className="mt-1 text-cyan-700 dark:text-cyan-300" />
+                <Zap className="mt-1 text-cyan-800 dark:text-cyan-300" />
               </div>
-              <div className="mt-8 flex items-end justify-between gap-4">
+              <div className="mt-8 flex flex-wrap items-end justify-between gap-4">
                 <div>
-                  <p className="font-mono text-4xl font-semibold tracking-tight tabular-nums sm:text-5xl">
+                  <p role="timer" aria-live="off" className="font-mono text-4xl font-semibold tracking-tight tabular-nums sm:text-5xl">
                     {isMounted && now ? now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '12:00 AM'}
                   </p>
                   <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
                     {isMounted && now ? now.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'Loading date…'}
                   </p>
                 </div>
-                <div className="hidden text-right sm:block">
+                <div className="text-right">
                   <p className="text-xs uppercase tracking-[0.18em] text-slate-500">{upNextLabel}</p>
                   <p className="mt-1 font-medium text-slate-800 dark:text-slate-200">
-                    {upcomingClass ? `${upcomingClass.courseCode} · ${upcomingClass.startTime} - ${upcomingClass.endTime}` : upNextEmpty}
+                    {upNextDetail}
                   </p>
+                  {upNextSub && (
+                    <p className={`mt-0.5 text-xs font-medium ${ongoingClass ? 'text-emerald-600 dark:text-emerald-400' : 'text-cyan-700 dark:text-cyan-300'}`}>
+                      {upNextSub}
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
             <div className={personal ? 'grid grid-cols-2 gap-3 lg:grid-cols-1' : 'grid gap-3'}>
               <div className="glass rounded-3xl p-5">
-                <Users className="text-cyan-700 dark:text-cyan-300" />
+                <Users className="text-cyan-800 dark:text-cyan-300" />
                 <p className="mt-5 text-3xl font-semibold">{regularCount}</p>
                 <p className="text-sm text-slate-600 dark:text-slate-400">regular classes</p>
               </div>
               {personal && (
-              <div className="glass glass-amber rounded-3xl p-5">
+              <div className="glass rounded-3xl p-5">
                 <div className="flex items-center gap-2">
                   <span className="size-2 rounded-full bg-amber-300" />
                   <p className="text-xs font-semibold uppercase tracking-widest text-amber-700 dark:text-amber-200">Retake</p>
                 </div>
                 <p className="mt-5 text-3xl font-semibold">{retakeCount}</p>
-                <p className="text-sm text-slate-600 dark:text-slate-400">MAT211 session</p>
+                <p className="text-sm text-slate-600 dark:text-slate-400">
+                  {retakeCount === 1 ? 'session' : 'sessions'}{retakeCourses.length > 0 ? ` · ${retakeCourses.join(', ')}` : ''}
+                </p>
               </div>
               )}
             </div>
@@ -290,7 +334,7 @@ export default function Page() {
 
           <section className="glass mt-8 rounded-3xl p-4 sm:flex sm:items-center sm:justify-between sm:gap-5">
             <div className="mb-3 flex items-center gap-2 sm:mb-0">
-              <Search className="text-cyan-700 dark:text-cyan-300" />
+              <Search className="text-cyan-800 dark:text-cyan-300" />
               <div>
                 <p className="text-sm font-semibold">Your section</p>
                 <p className="text-xs text-slate-500">Regular classes for {selectedSection}</p>
@@ -304,7 +348,7 @@ export default function Page() {
                 id="section-select"
                 value={selectedSection}
                 onChange={(event) => chooseSection(event.target.value)}
-                className="w-full appearance-none rounded-2xl glass-input px-4 py-3 text-sm font-medium text-slate-900 outline-none ring-cyan-400 dark:text-slate-100 dark:ring-cyan-300 transition focus:ring-2"
+                className={`w-full appearance-none rounded-2xl glass-input px-4 py-3 pr-10 text-sm font-medium text-slate-900 outline-none ring-cyan-400 dark:text-slate-100 dark:ring-cyan-300 transition focus:ring-2 ${FOCUS_RING}`}
               >
                 {SECTIONS.map((section) => (
                   <option key={section} value={section} className="bg-white text-slate-900 dark:bg-slate-900 dark:text-slate-100">
@@ -312,18 +356,27 @@ export default function Page() {
                   </option>
                 ))}
               </select>
+              <ChevronDown aria-hidden="true" className="pointer-events-none absolute right-3.5 top-1/2 size-4 -translate-y-1/2 text-slate-500" />
             </div>
           </section>
 
-          <nav aria-label="Select a day" className="mt-5 flex gap-2 overflow-x-auto pb-1">
+          {isNextWeek && (
+            <p className="mt-5 text-xs font-medium text-slate-500 dark:text-slate-400">
+              No classes today (Friday) — showing next week.
+            </p>
+          )}
+
+          <nav aria-label="Select a day" className="mt-3 flex gap-2 overflow-x-auto pb-1 sm:mt-5">
             {DAYS.map((day, i) => {
               const isToday = isMounted && now !== null && day === getToday(now)
+              const count = weekCounts[day]
               return (
                 <button
                   key={day}
-                  onClick={() => setSelectedDay(day)}
+                  type="button"
+                  onClick={() => selectDay(day)}
                   aria-current={isToday ? 'date' : undefined}
-                  className={`relative min-w-[58px] rounded-full px-4 py-3 text-sm font-semibold transition ${
+                  className={`relative min-w-[58px] rounded-full px-4 py-3 text-sm font-semibold transition ${FOCUS_RING} ${
                     selectedDay === day
                       ? 'glass glass-active text-slate-950'
                       : 'glass glass-hover text-slate-600 dark:text-slate-400'
@@ -331,6 +384,11 @@ export default function Page() {
                 >
                   <span className="block text-xs opacity-70">{FULL_DAYS[day].slice(0, 3)}</span>
                   <span className="block text-base tabular-nums">{weekDates ? weekDates[i].getDate() : '·'}</span>
+                  {count > 0 && (
+                    <span className="mt-0.5 block text-[9px] font-semibold uppercase tracking-wide tabular-nums opacity-70">
+                      {count} {count === 1 ? 'class' : 'classes'}
+                    </span>
+                  )}
                   {isToday && <span aria-label="Today" className="absolute right-1.5 top-1.5 size-1.5 rounded-full bg-current" />}
                 </button>
               )
@@ -357,7 +415,7 @@ export default function Page() {
             </div>
 
             {!sectionHasData && (
-              <div className="glass glass-amber mb-3 rounded-2xl px-4 py-3 text-sm text-amber-900 dark:text-amber-200">
+              <div className="glass glass-dim mb-3 rounded-2xl px-4 py-3 text-sm text-slate-600 dark:text-slate-300">
                 No regular routine has been added for {selectedSection} yet.{personal ? ' Only your personal sessions are shown.' : ''}
               </div>
             )}
@@ -366,9 +424,10 @@ export default function Page() {
               {dayClasses.map((item, index) => {
                 const previous = dayClasses[index - 1]
                 const gap = previous ? item.startMinutes - previous.endMinutes : 0
-                const durationHours = Math.floor(gap / 60)
-                const durationMins = gap % 60
+                const gapHours = Math.floor(gap / 60)
+                const gapMins = gap % 60
                 const inactive = isInactive(item, personal)
+                const ongoing = ongoingClass?.id === item.id
                 const skippedLabel = isSkippedCourse(item, personal) ? 'Not registered' : inactive ? `${item.subSection} Lab (skipped)` : ''
 
                 return (
@@ -380,19 +439,18 @@ export default function Page() {
                         <div>
                           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-700 dark:text-slate-300">Break Time</p>
                           <p className="mt-1 text-xs">
-                            {previous.endTime} - {item.startTime} ({durationHours}h {durationMins}m)
+                            {previous.endTime} - {item.startTime} ({gapHours}h {gapMins}m)
                           </p>
                         </div>
                         <Coffee aria-hidden="true" />
                       </div>
                     )}
                     <article
-                      key={item.id}
-                      className={`glass group flex items-stretch gap-3 rounded-3xl p-4 transition hover:-translate-y-0.5 sm:gap-5 sm:p-5 ${
-                        inactive
+                      className={`glass flex items-stretch gap-3 rounded-3xl p-4 transition sm:gap-5 sm:p-5 ${
+                        ongoing
+                          ? 'glass-now'
+                          : inactive
                           ? 'glass-dim opacity-50 grayscale'
-                          : item.isRetake
-                          ? 'glass-amber'
                           : 'glass-hover'
                       }`}
                     >
@@ -406,6 +464,11 @@ export default function Page() {
                           <h3 className={`text-base font-semibold sm:text-lg ${inactive ? 'line-through' : ''}`}>
                             {item.courseCode}
                           </h3>
+                          {ongoing && (
+                            <span className="rounded-full bg-emerald-400/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:bg-emerald-300/10 dark:text-emerald-300">
+                              Now
+                            </span>
+                          )}
                           <span
                             className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
                               inactive
@@ -430,12 +493,14 @@ export default function Page() {
                           <span className="inline-flex items-center gap-1.5">
                             <MapPin className="size-3.5" /> {item.room}
                           </span>
-                          <span className="inline-flex items-center gap-1.5">
-                            <Users className="size-3.5" /> {item.teacher}
+                          <span
+                            className="inline-flex items-center gap-1.5"
+                            title={TEACHERS[item.teacher] ? item.teacher : undefined}
+                          >
+                            <Users className="size-3.5" /> {teacherLabel(item.teacher)}
                           </span>
                         </div>
                       </div>
-                      <ChevronRight className="my-auto hidden text-slate-600 transition group-hover:translate-x-1 sm:block" />
                     </article>
                   </Fragment>
                 )
@@ -446,11 +511,17 @@ export default function Page() {
           <footer className="mt-10 flex flex-wrap items-center justify-between gap-3 border-t border-slate-400/25 dark:border-white/10 pt-5 text-xs text-slate-500">
             <span>Routine V3.1 · Effective 26 September 2026</span>
             <span className="inline-flex items-center gap-1.5">
-              <span className="size-1.5 rounded-full bg-emerald-400" /> Live schedule
+              <span className={`size-1.5 rounded-full ${liveStatus.dot} ${liveStatus.pulse ? 'animate-pulse' : ''}`} /> {liveStatus.label}
             </span>
           </footer>
         </div>
       </main>
     </>
   )
+}
+
+function formatCountdown(totalMinutes: number) {
+  if (totalMinutes <= 0) return 'now'
+  if (totalMinutes < 60) return `${totalMinutes}m`
+  return `${Math.floor(totalMinutes / 60)}h ${totalMinutes % 60}m`
 }
