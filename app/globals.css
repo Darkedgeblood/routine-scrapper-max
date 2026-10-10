@@ -4,7 +4,7 @@
 
 @custom-variant dark (&:is(.dark *));
 
-@theme inline {
+@theme {
   --color-ring: var(--ring);
   --color-input: var(--input);
   --color-border: var(--border);
