@@ -1,4 +1,4 @@
-use client'
+'use client'
 
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import { BookOpen, CalendarDays, Clock, Coffee, MapPin, Moon, RotateCcw, Sun, Users } from 'lucide-react'
