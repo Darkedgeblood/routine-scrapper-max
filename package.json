@@ -1,6 +1,6 @@
 {
   "name": "routine-scrapper-max",
-  "version": "3.1.0",
+  "version": "4.0.0",
   "private": true,
   "packageManager": "pnpm@12.3.4",
   "scripts": {
