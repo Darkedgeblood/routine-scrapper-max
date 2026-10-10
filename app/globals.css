@@ -107,6 +107,19 @@
   }
   body {
     @apply bg-background text-foreground;
+    /* SF Pro on Apple devices (real Apple font), Inter everywhere else. */
+    font-family:
+      -apple-system,
+      BlinkMacSystemFont,
+      'SF Pro Display',
+      'SF Pro Text',
+      'Helvetica Neue',
+      var(--font-inter),
+      'Segoe UI',
+      Roboto,
+      Arial,
+      sans-serif;
+    letter-spacing: -0.01em;
   }
 }
 
@@ -118,35 +131,35 @@
   0% {
     opacity: 0;
     transform: scale(0.25) rotate(-16deg);
-    filter: drop-shadow(0 0 0 rgba(6, 182, 212, 0));
+    filter: drop-shadow(0 0 0 rgba(255, 255, 255, 0));
   }
   50% {
     opacity: 1;
     transform: scale(1.15) rotate(4deg);
-    filter: drop-shadow(0 0 32px rgba(6, 182, 212, 0.9));
+    filter: drop-shadow(0 0 32px rgba(255, 255, 255, 0.35));
   }
   70% {
     transform: scale(0.95) rotate(-2deg);
-    filter: drop-shadow(0 0 18px rgba(6, 182, 212, 0.6));
+    filter: drop-shadow(0 0 18px rgba(255, 255, 255, 0.25));
   }
   85% {
     transform: scale(1.04) rotate(1deg);
-    filter: drop-shadow(0 0 24px rgba(6, 182, 212, 0.75));
+    filter: drop-shadow(0 0 24px rgba(255, 255, 255, 0.3));
   }
   100% {
     opacity: 1;
     transform: scale(1) rotate(0deg);
-    filter: drop-shadow(0 0 16px rgba(6, 182, 212, 0.5));
+    filter: drop-shadow(0 0 16px rgba(255, 255, 255, 0.2));
   }
 }
 
 @keyframes pulseGlow {
   0%, 100% {
-    filter: drop-shadow(0 0 14px rgba(6, 182, 212, 0.45));
+    filter: drop-shadow(0 0 14px rgba(255, 255, 255, 0.2));
     transform: scale(1) translateY(0px);
   }
   50% {
-    filter: drop-shadow(0 0 32px rgba(6, 182, 212, 0.85));
+    filter: drop-shadow(0 0 32px rgba(255, 255, 255, 0.4));
     transform: scale(1.04) translateY(-4px);
   }
 }
@@ -174,127 +187,102 @@
 }
 
 /* ==========================================================================
-   LIQUID GLASS THEME (inspired by the Liquify look)
-   A solid ambient backdrop (soft blue-grey in light, true AMOLED black in
-   dark) + soft translucent panels. There is deliberately NO backdrop-filter
-   and no background image: it costs nothing on low-end phones and pure black
-   pixels are switched off on OLED screens.
+   iOS THEME
+   iOS systemGroupedBackground colors + solid frosted panels.
+   Deliberately NO backdrop-filter and no background image: it costs nothing
+   on low-end phones and pure black pixels are switched off on OLED screens.
    Every variant is defined for light AND dark with matching specificity.
    ========================================================================== */
 
-.glass-scene {
+.ios-scene {
   position: relative;
-  background: #e7edf4;
+  background: #f2f2f7; /* iOS systemGroupedBackground (light) */
 }
-.glass-scene::before {
+.ios-scene::before {
   content: '';
   position: fixed;
   inset: 0;
   z-index: 0;
   pointer-events: none;
   transform: translateZ(0);
-  /* one very soft accent glow at the top, so the glass has something to catch */
-  background: radial-gradient(120% 60% at 50% -10%, rgba(94, 234, 212, 0.22), rgba(94, 234, 212, 0) 70%);
+  background: radial-gradient(120% 60% at 50% -10%, rgba(120, 120, 128, 0.1), rgba(120, 120, 128, 0) 70%);
 }
-.glass-scene.dark {
-  background: #000000;
+.ios-scene.dark {
+  background: #000000; /* true AMOLED black */
 }
-.glass-scene.dark::before {
-  background: radial-gradient(120% 60% at 50% -10%, rgba(45, 212, 191, 0.09), rgba(45, 212, 191, 0) 70%);
-}
-
-/* Base panel */
-.glass {
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(255, 255, 255, 0.52));
-  border: 1px solid rgba(255, 255, 255, 0.85);
-  box-shadow:
-    0 6px 20px rgba(20, 40, 70, 0.16),
-    inset 0 1px 0 rgba(255, 255, 255, 0.95);
-}
-.dark .glass {
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.02) 55%),
-    rgba(20, 24, 30, 0.72);
-  border-color: rgba(255, 255, 255, 0.12);
-  box-shadow:
-    0 6px 22px rgba(0, 0, 0, 0.6),
-    inset 0 1px 0 rgba(255, 255, 255, 0.14);
+.ios-scene.dark::before {
+  background: radial-gradient(120% 60% at 50% -10%, rgba(120, 120, 128, 0.16), rgba(120, 120, 128, 0) 70%);
 }
 
-/* Currently-happening class: emerald accent border + glow */
-.glass-now {
-  border-color: rgba(16, 185, 129, 0.55);
-  box-shadow:
-    0 6px 20px rgba(20, 40, 70, 0.16),
-    0 0 0 1px rgba(16, 185, 129, 0.35),
-    0 0 18px rgba(16, 185, 129, 0.25),
-    inset 0 1px 0 rgba(255, 255, 255, 0.95);
+/* Base panel (iOS grouped cell: white card, hairline border, whisper shadow) */
+.panel {
+  background: #ffffff;
+  border: 1px solid #e5e5ea;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
-.dark .glass-now {
-  border-color: rgba(52, 211, 153, 0.6);
-  box-shadow:
-    0 6px 22px rgba(0, 0, 0, 0.6),
-    0 0 0 1px rgba(52, 211, 153, 0.4),
-    0 0 20px rgba(52, 211, 153, 0.22),
-    inset 0 1px 0 rgba(255, 255, 255, 0.14);
+.dark .panel {
+  background: #1c1c1e; /* iOS systemGray6 */
+  border-color: rgba(255, 255, 255, 0.09);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
 }
 
-/* Selected day pill: solid accent with a glow */
-.glass-active {
-  background: linear-gradient(135deg, #5eead4, #22d3ee);
-  border-color: rgba(255, 255, 255, 0.75);
+/* Currently-happening class: iOS blue accent ring */
+.ios-now {
+  border-color: rgba(0, 122, 255, 0.55);
   box-shadow:
-    0 6px 20px rgba(34, 211, 238, 0.4),
-    inset 0 1px 0 rgba(255, 255, 255, 0.9);
+    0 1px 3px rgba(0, 0, 0, 0.05),
+    0 0 0 1px rgba(0, 122, 255, 0.35);
 }
-.dark .glass-active {
-  background: linear-gradient(135deg, #5eead4, #22d3ee);
-  border-color: rgba(255, 255, 255, 0.45);
+.dark .ios-now {
+  border-color: rgba(10, 132, 255, 0.65);
   box-shadow:
-    0 6px 22px rgba(34, 211, 238, 0.35),
-    inset 0 1px 0 rgba(255, 255, 255, 0.7);
+    0 4px 14px rgba(0, 0, 0, 0.35),
+    0 0 0 1px rgba(10, 132, 255, 0.45),
+    0 0 18px rgba(10, 132, 255, 0.22);
+}
+
+/* Segmented control selected pill: inverted fill, iOS-style */
+.ios-active {
+  background: #1c1c1e;
+  color: #ffffff;
+  border-color: transparent;
+}
+.dark .ios-active {
+  background: #f2f2f7;
+  color: #000000;
+  border-color: transparent;
 }
 
 /* Skipped classes */
-.glass-dim {
-  background: rgba(255, 255, 255, 0.28);
+.panel-dim {
+  background: #f7f7f9;
   box-shadow: none;
 }
-.dark .glass-dim {
-  background: rgba(20, 24, 30, 0.4);
+.dark .panel-dim {
+  background: #131315;
   box-shadow: none;
 }
 
-.glass-hover {
-  transition: border-color 0.2s ease, transform 0.2s ease;
+/* Floating day tab bar */
+.ios-tabbar {
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid #e5e5ea;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.12);
 }
-.glass-hover:hover {
-  border-color: rgba(45, 212, 191, 0.7);
-}
-.dark .glass-hover:hover {
-  border-color: rgba(94, 234, 212, 0.55);
-}
-
-/* Select box */
-.glass-input {
-  background: rgba(255, 255, 255, 0.65);
-  border: 1px solid rgba(255, 255, 255, 0.85);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.95);
-}
-.dark .glass-input {
-  background: rgba(20, 24, 30, 0.72);
-  border-color: rgba(255, 255, 255, 0.14);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+.dark .ios-tabbar {
+  background: rgba(28, 28, 30, 0.94);
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.5);
 }
 
 /* Break-time stripes */
 .break-stripes {
-  background: repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.45), rgba(255, 255, 255, 0.45) 10px, rgba(255, 255, 255, 0.18) 10px, rgba(255, 255, 255, 0.18) 20px);
-  border: 1px dashed rgba(100, 116, 139, 0.45);
+  background: repeating-linear-gradient(45deg, rgba(120, 120, 128, 0.06) 0 10px, rgba(120, 120, 128, 0.02) 10px 20px);
+  border: 1px dashed rgba(120, 120, 128, 0.35);
 }
 .dark .break-stripes {
-  background: repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.07) 10px, rgba(255, 255, 255, 0.025) 10px, rgba(255, 255, 255, 0.025) 20px);
-  border-color: rgba(255, 255, 255, 0.16);
+  background: repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.05) 0 10px, rgba(255, 255, 255, 0.02) 10px 20px);
+  border-color: rgba(255, 255, 255, 0.14);
 }
 
 /* ==========================================================================
@@ -305,10 +293,5 @@
   .animate-app-intro,
   .animate-splash-fade {
     animation: none;
-  }
-  .glass-hover,
-  .glass-hover:hover {
-    transition: none;
-    transform: none;
   }
 }

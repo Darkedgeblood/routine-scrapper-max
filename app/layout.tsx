@@ -4,8 +4,9 @@ import type { Metadata, Viewport } from 'next'
 import Script from 'next/script'
 import './globals.css'
 
-// 1. Initialize the Inter font
-const inter = Inter({ subsets: ['latin'] })
+// Inter is the fallback font for non-Apple devices (Android/Windows).
+// Apple devices use the real SF Pro via the system font stack in globals.css.
+const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
 
 export const metadata: Metadata = {
   title: 'Routine Scrapper Max',
@@ -34,8 +35,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      {/* 2. Inject the font class into the body */}
-      <body className={`antialiased ${inter.className}`}>
+      <body className={`antialiased ${inter.variable}`}>
         {children}
         {process.env.NODE_ENV === 'production' && <Analytics />}
         <Script id="register-sw" strategy="afterInteractive">
