@@ -2,8 +2,10 @@
 @import 'tw-animate-css';
 @import 'shadcn/tailwind.css';
 
-@custom-variant dark (&:is(.dark *));
+/* 1. Fix the dark mode selector so it applies to the parent AND children */
+@custom-variant dark (&:where(.dark, .dark *));
 
+/* 2. Remove "inline" so Tailwind doesn't delete the default slate/cyan colors */
 @theme {
   --color-ring: var(--ring);
   --color-input: var(--input);
