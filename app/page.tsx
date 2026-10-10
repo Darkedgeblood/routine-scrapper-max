@@ -294,8 +294,7 @@ export default function Page() {
                   {isMounted && now ? now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '12:00 AM'}
                 </p>
                 <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
-                  {isMounted && now ? now.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : 'Loading date…'}
-                  {selectedDateLabel ? ` · ${FULL_DAYS[selectedDay]} ${selectedDateLabel}` : ''}
+                  {isMounted && now ? now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }) : 'Loading date…'}
                 </p>
               </div>
               <div className="text-right">
@@ -312,14 +311,14 @@ export default function Page() {
 
           {/* Today at a glance */}
           <section className={`mt-3 grid gap-3 ${personal ? 'grid-cols-3' : 'grid-cols-2'}`}>
-            <div className="panel flex items-center gap-3 rounded-3xl p-4">
+            <div className={`panel flex items-center gap-3 rounded-3xl p-4 transition-opacity ${regularCount === 0 ? 'opacity-50' : ''}`}>
               <BookOpen className="size-5 shrink-0 text-slate-400" />
               <div className="min-w-0">
                 <p className="text-xl font-bold leading-none tabular-nums">{regularCount}</p>
                 <p className="mt-1 truncate text-[11px] font-medium text-slate-500 dark:text-slate-400">classes today</p>
               </div>
             </div>
-            <div className="panel flex items-center gap-3 rounded-3xl p-4">
+            <div className={`panel flex items-center gap-3 rounded-3xl p-4 transition-opacity ${totalDurationMinutes === 0 ? 'opacity-50' : ''}`}>
               <Clock className="size-5 shrink-0 text-slate-400" />
               <div className="min-w-0">
                 <p className="text-xl font-bold leading-none tabular-nums">
@@ -347,7 +346,7 @@ export default function Page() {
               <p className="text-[15px] font-semibold">Section</p>
               <p className="text-[13px] text-slate-500 dark:text-slate-400">{selectedSection}</p>
             </div>
-            <div className="mt-3 flex gap-1.5 overflow-x-auto pb-0.5">
+            <div className="mt-3 flex gap-1.5 overflow-x-auto pb-0.5 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
               {SECTIONS.map((section) => (
                 <button
                   key={section}
@@ -507,7 +506,9 @@ export default function Page() {
                     onClick={() => selectDay(day)}
                     aria-current={isToday ? 'date' : undefined}
                     aria-pressed={active}
-                    className={`flex flex-1 flex-col items-center gap-0.5 rounded-2xl py-1.5 transition ${FOCUS_RING}`}
+                    className={`flex flex-1 flex-col items-center gap-0.5 rounded-2xl py-1.5 transition ${
+                      active ? 'bg-black/5 dark:bg-white/10' : 'hover:bg-black/5 dark:hover:bg-white/5'
+                    } ${FOCUS_RING}`}
                   >
                     <span className={`text-[10px] font-semibold uppercase tracking-wide ${active ? IOS_BLUE : 'text-slate-400 dark:text-slate-500'}`}>
                       {day}
