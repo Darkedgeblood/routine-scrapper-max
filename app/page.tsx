@@ -1,7 +1,7 @@
 'use client'
 
-import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
-import { BookOpen, CalendarDays, Clock, Coffee, MapPin, Moon, RotateCcw, Sun, Users } from 'lucide-react'
+import { Fragment, startTransition, useEffect, useMemo, useRef, useState } from 'react'
+import { BookOpen, CalendarDays, Clock, Coffee, MapPin, Moon, Plus, RotateCcw, Sun, Users } from 'lucide-react'
 
 import {
   DAYS,
@@ -14,6 +14,8 @@ import {
   TEACHERS,
   type RoutineItem,
 } from '@/lib/routine-data'
+import { toDateKey, useReminders } from '@/lib/reminders'
+import { ReminderRow, ReminderSheet, type CourseOption } from '@/components/reminder-sheet'
 
 // Shared focus ring for every interactive element.
 const FOCUS_RING = 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007AFF]/60 dark:focus-visible:ring-[#0A84FF]/60'
@@ -62,7 +64,12 @@ function formatCountdown(totalMinutes: number) {
 }
 
 export default function Page() {
+  // tabDay updates instantly (it drives the sliding highlight); selectedDay follows in a
+  // low-priority transition so re-rendering the class list never delays the highlight.
+  const [tabDay, setTabDay] = useState<(typeof DAYS)[number]>('Sat')
   const [selectedDay, setSelectedDay] = useState<(typeof DAYS)[number]>('Sat')
+  const [sheetOpen, setSheetOpen] = useState(false)
+  const { reminders, pending, add: addReminder, toggle: toggleReminder, remove: removeReminder } = useReminders()
   const [now, setNow] = useState<Date | null>(null)
   const [dark, setDark] = useState(true)
   const [isMounted, setIsMounted] = useState(false)
@@ -80,7 +87,9 @@ export default function Page() {
 
     // Restore the last-viewed day (falls back to today).
     const savedDay = window.localStorage.getItem('routine-day')
-    setSelectedDay(savedDay && (DAYS as readonly string[]).includes(savedDay) ? (savedDay as (typeof DAYS)[number]) : today)
+    const initialDay = savedDay && (DAYS as readonly string[]).includes(savedDay) ? (savedDay as (typeof DAYS)[number]) : today
+    setSelectedDay(initialDay)
+    setTabDay(initialDay)
 
     // Restore dark mode (defaults to dark).
     const savedDark = window.localStorage.getItem('routine-dark')
@@ -137,8 +146,10 @@ export default function Page() {
   }
 
   const selectDay = (day: (typeof DAYS)[number]) => {
-    setSelectedDay(day)
-    window.localStorage.setItem('routine-day', day)
+    if (day === tabDay) return
+    setTabDay(day) // highlight moves right away
+    startTransition(() => setSelectedDay(day)) // the class list catches up without blocking it
+    window.setTimeout(() => window.localStorage.setItem('routine-day', day), 0)
   }
 
   const chooseSection = (section: string) => {
@@ -170,6 +181,25 @@ export default function Page() {
     return counts
   }, [selectedSection, personal])
 
+  // Courses offered in the reminder form: this section's classes plus retakes (and personal sessions).
+  const courseOptions = useMemo<CourseOption[]>(() => {
+    const source = personal ? [...ROUTINE_DATA, ...PERSONAL_DATA] : ROUTINE_DATA
+    const seen = new Map<string, string>()
+    for (const item of source) {
+      if ((item.section === selectedSection || item.isRetake) && !seen.has(item.courseCode)) {
+        seen.set(item.courseCode, item.courseTitle.replace(/ Lab$/, ''))
+      }
+    }
+    return [...seen].map(([code, title]) => ({ code, title })).sort((a, b) => a.code.localeCompare(b.code))
+  }, [selectedSection, personal])
+
+  // Pending reminders grouped by calendar date (for the day card and the red dots on the tab bar).
+  const pendingByDate = useMemo(() => {
+    const map: Record<string, typeof pending> = {}
+    for (const r of pending) (map[r.date] ??= []).push(r)
+    return map
+  }, [pending])
+
   const sectionHasData = useMemo(
     () => ROUTINE_DATA.some((item) => item.section === selectedSection),
     [selectedSection]
@@ -189,6 +219,7 @@ export default function Page() {
   const selectedDateLabel = selectedDate
     ? selectedDate.toLocaleDateString('en-US', { day: 'numeric', month: 'short' })
     : ''
+  const dayReminders = selectedDate ? pendingByDate[toDateKey(selectedDate)] ?? [] : []
   const isViewingToday = isMounted && now !== null && selectedDay === getToday(now)
   // Friday has no tab; the tabs then show the coming week.
   const isNextWeek = isMounted && now !== null && getToday(now) === null
@@ -276,14 +307,36 @@ export default function Page() {
                 </p>
               </div>
             </div>
-            <button
-              type="button"
-              aria-label={dark ? 'Switch to light mode' : 'Switch to dark mode'}
-              onClick={toggleDark}
-              className={`panel flex size-11 items-center justify-center rounded-full text-slate-600 transition dark:text-slate-300 ${FOCUS_RING}`}
-            >
-              {dark ? <Sun className="size-5" /> : <Moon className="size-5" />}
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setSheetOpen(true)}
+                aria-label={
+                  isMounted && pending.length > 0
+                    ? `Reminders, ${pending.length} pending`
+                    : 'Add a quiz, assignment or presentation'
+                }
+                className={`panel relative flex size-11 items-center justify-center rounded-full text-slate-600 transition dark:text-slate-300 ${FOCUS_RING}`}
+              >
+                <Plus className="size-5" />
+                {isMounted && pending.length > 0 && (
+                  <span
+                    aria-hidden="true"
+                    className="absolute -right-1 -top-1 flex h-[20px] min-w-[20px] items-center justify-center rounded-full bg-[#FF3B30] px-1.5 text-[11px] font-bold leading-none text-white ring-2 ring-[#f2f2f7] dark:ring-black"
+                  >
+                    {pending.length > 99 ? '99+' : pending.length}
+                  </span>
+                )}
+              </button>
+              <button
+                type="button"
+                aria-label={dark ? 'Switch to light mode' : 'Switch to dark mode'}
+                onClick={toggleDark}
+                className={`panel flex size-11 items-center justify-center rounded-full text-slate-600 transition dark:text-slate-300 ${FOCUS_RING}`}
+              >
+                {dark ? <Sun className="size-5" /> : <Moon className="size-5" />}
+              </button>
+            </div>
           </header>
 
           {/* Compact live status card */}
@@ -397,6 +450,17 @@ export default function Page() {
               </div>
             )}
 
+            {dayReminders.length > 0 && now && (
+              <div className="panel mb-3 rounded-2xl px-4 py-1">
+                <p className="pt-3 text-[11px] font-semibold uppercase tracking-wider text-[#FF3B30]">Due this day</p>
+                <div className="divide-y divide-slate-200 dark:divide-white/10">
+                  {dayReminders.map((r) => (
+                    <ReminderRow key={r.id} reminder={r} now={now} onToggle={toggleReminder} showDate={false} />
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div className="flex flex-col gap-2.5">
               {dayClasses.map((item, index) => {
                 const previous = dayClasses[index - 1]
@@ -494,11 +558,21 @@ export default function Page() {
         {/* iOS-style floating day tab bar */}
         <nav aria-label="Select a day" className="fixed inset-x-0 bottom-0 z-40">
           <div className="mx-auto max-w-3xl px-4 pb-4">
-            <div className="ios-tabbar flex rounded-3xl px-2 py-2">
+            <div className="ios-tabbar relative flex rounded-3xl px-2 py-2">
+              {/* Sliding highlight: moves with a GPU transform instead of re-painting each tab */}
+              <span
+                aria-hidden="true"
+                className="ios-tab-indicator pointer-events-none absolute bottom-2 left-2 top-2 rounded-2xl bg-black/5 dark:bg-white/10"
+                style={{
+                  width: `calc((100% - 16px) / ${DAYS.length})`,
+                  transform: `translateX(${DAYS.indexOf(tabDay) * 100}%)`,
+                }}
+              />
               {DAYS.map((day, i) => {
                 const isToday = isMounted && now !== null && day === getToday(now)
-                const active = selectedDay === day
+                const active = tabDay === day
                 const count = weekCounts[day]
+                const hasDue = weekDates ? (pendingByDate[toDateKey(weekDates[i])]?.length ?? 0) > 0 : false
                 return (
                   <button
                     key={day}
@@ -506,14 +580,12 @@ export default function Page() {
                     onClick={() => selectDay(day)}
                     aria-current={isToday ? 'date' : undefined}
                     aria-pressed={active}
-                    className={`flex flex-1 flex-col items-center gap-0.5 rounded-2xl py-1.5 transition ${
-                      active ? 'bg-black/5 dark:bg-white/10' : 'hover:bg-black/5 dark:hover:bg-white/5'
-                    } ${FOCUS_RING}`}
+                    className={`relative z-10 flex flex-1 flex-col items-center gap-0.5 rounded-2xl py-1.5 ${FOCUS_RING}`}
                   >
-                    <span className={`text-[10px] font-semibold uppercase tracking-wide ${active ? IOS_BLUE : 'text-slate-400 dark:text-slate-500'}`}>
+                    <span className={`text-[10px] font-semibold uppercase tracking-wide transition-colors duration-200 ${active ? IOS_BLUE : 'text-slate-400 dark:text-slate-500'}`}>
                       {day}
                     </span>
-                    <span className={`text-[14px] font-bold tabular-nums ${active ? 'text-slate-900 dark:text-white' : 'text-slate-400 dark:text-slate-500'}`}>
+                    <span className={`text-[14px] font-bold tabular-nums transition-colors duration-200 ${active ? 'text-slate-900 dark:text-white' : 'text-slate-400 dark:text-slate-500'}`}>
                       {weekDates ? weekDates[i].getDate() : '·'}
                     </span>
                     <span className="text-[9px] font-medium tabular-nums text-slate-400 dark:text-slate-500">
@@ -522,12 +594,26 @@ export default function Page() {
                     {isToday && (
                       <span aria-label="Today" className={`mt-0.5 size-1 rounded-full ${IOS_BLUE}`} />
                     )}
+                    {hasDue && (
+                      <span aria-label="Has a reminder due" className="absolute right-2 top-1.5 size-1.5 rounded-full bg-[#FF3B30]" />
+                    )}
                   </button>
                 )
               })}
             </div>
           </div>
         </nav>
+
+        <ReminderSheet
+          open={sheetOpen}
+          onClose={() => setSheetOpen(false)}
+          reminders={reminders}
+          now={now}
+          courses={courseOptions}
+          onAdd={addReminder}
+          onToggle={toggleReminder}
+          onRemove={removeReminder}
+        />
       </main>
     </>
   )
