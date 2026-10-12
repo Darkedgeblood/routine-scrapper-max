@@ -1,7 +1,7 @@
 'use client'
 
 import { Fragment, startTransition, useEffect, useMemo, useRef, useState } from 'react'
-import { BookOpen, CalendarDays, Clock, Coffee, MapPin, Moon, Plus, RotateCcw, Sun, Users } from 'lucide-react'
+import { BookOpen, CalendarDays, ChevronDown, Clock, Coffee, MapPin, Moon, Plus, RotateCcw, Sun, Users } from 'lucide-react'
 
 import {
   DAYS,
@@ -15,7 +15,7 @@ import {
   type RoutineItem,
 } from '@/lib/routine-data'
 import { toDateKey, useReminders } from '@/lib/reminders'
-import { ReminderRow, ReminderSheet, type CourseOption } from '@/components/reminder-sheet'
+import { ReminderRow, ReminderSheet, TYPE_META, type CourseOption } from '@/components/reminder-sheet'
 
 // Shared focus ring for every interactive element.
 const FOCUS_RING = 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007AFF]/60 dark:focus-visible:ring-[#0A84FF]/60'
@@ -69,6 +69,8 @@ export default function Page() {
   const [tabDay, setTabDay] = useState<(typeof DAYS)[number]>('Sat')
   const [selectedDay, setSelectedDay] = useState<(typeof DAYS)[number]>('Sat')
   const [sheetOpen, setSheetOpen] = useState(false)
+  const [sectionOpen, setSectionOpen] = useState(false)
+  const sectionMenuRef = useRef<HTMLDivElement>(null)
   const { reminders, pending, add: addReminder, toggle: toggleReminder, remove: removeReminder } = useReminders()
   const [now, setNow] = useState<Date | null>(null)
   const [dark, setDark] = useState(true)
@@ -122,6 +124,23 @@ export default function Page() {
     }
   }, [])
 
+  // Close the section menu on outside tap or Escape.
+  useEffect(() => {
+    if (!sectionOpen) return
+    const onPointer = (e: PointerEvent) => {
+      if (!sectionMenuRef.current?.contains(e.target as Node)) setSectionOpen(false)
+    }
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setSectionOpen(false)
+    }
+    document.addEventListener('pointerdown', onPointer)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('pointerdown', onPointer)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [sectionOpen])
+
   // Tap the logo 5 times quickly to switch personal mode on or off.
   const handleLogoTap = () => {
     tapCount.current += 1
@@ -155,6 +174,7 @@ export default function Page() {
   const chooseSection = (section: string) => {
     if (!SECTIONS.includes(section)) return
     setSelectedSection(section)
+    setSectionOpen(false)
     window.localStorage.setItem('routine-section', section)
   }
 
@@ -220,6 +240,9 @@ export default function Page() {
     ? selectedDate.toLocaleDateString('en-US', { day: 'numeric', month: 'short' })
     : ''
   const dayReminders = selectedDate ? pendingByDate[toDateKey(selectedDate)] ?? [] : []
+  const dayDoneCount = selectedDate
+    ? reminders.filter((r) => r.done && r.date === toDateKey(selectedDate)).length
+    : 0
   const isViewingToday = isMounted && now !== null && selectedDay === getToday(now)
   // Friday has no tab; the tabs then show the coming week.
   const isNextWeek = isMounted && now !== null && getToday(now) === null
@@ -288,8 +311,8 @@ export default function Page() {
         <div className="relative z-10 mx-auto min-h-screen max-w-3xl px-4 pb-32 pt-6 sm:px-6">
 
           {/* iOS Large Title header */}
-          <header className="flex items-start justify-between gap-4">
-            <div className="flex items-center gap-3">
+          <header className="flex items-start justify-between gap-3">
+            <div className="flex min-w-0 items-center gap-3">
               <button
                 type="button"
                 onClick={handleLogoTap}
@@ -298,16 +321,53 @@ export default function Page() {
               >
                 <CalendarDays className="size-5" />
               </button>
-              <div>
+              <div className="min-w-0">
                 <h1 className="text-[32px] font-bold leading-tight tracking-tight">
                   Routine
                 </h1>
-                <p className="text-sm text-slate-500 dark:text-slate-400">
+                <p className="truncate text-sm text-slate-500 dark:text-slate-400">
                   {personal ? 'Personal schedule' : 'CSE · Batch 69'}
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex shrink-0 items-center gap-1.5">
+              <div ref={sectionMenuRef} className="relative">
+                <button
+                  type="button"
+                  onClick={() => setSectionOpen((v) => !v)}
+                  aria-haspopup="true"
+                  aria-expanded={sectionOpen}
+                  aria-label={`Section ${selectedSection}, change section`}
+                  className={`panel flex h-11 items-center gap-0.5 rounded-full pl-3.5 pr-2.5 text-[14px] font-semibold tabular-nums text-slate-700 transition dark:text-slate-200 ${FOCUS_RING}`}
+                >
+                  {selectedSection}
+                  <ChevronDown className={`size-4 text-slate-400 transition-transform ${sectionOpen ? 'rotate-180' : ''}`} />
+                </button>
+                {sectionOpen && (
+                  <div className="panel absolute right-0 top-[52px] z-30 w-[272px] rounded-2xl p-2 shadow-xl">
+                    <p className="px-2 pb-1.5 pt-1 text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                      Section
+                    </p>
+                    <div className="grid grid-cols-4 gap-1.5">
+                      {SECTIONS.map((section) => (
+                        <button
+                          key={section}
+                          type="button"
+                          onClick={() => chooseSection(section)}
+                          aria-pressed={selectedSection === section}
+                          className={`rounded-full px-1 py-2 text-[13px] font-semibold tabular-nums transition ${
+                            selectedSection === section
+                              ? 'ios-active'
+                              : `text-slate-600 hover:bg-black/5 dark:text-slate-300 dark:hover:bg-white/10 ${FOCUS_RING}`
+                          }`}
+                        >
+                          {section}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
               <button
                 type="button"
                 onClick={() => setSheetOpen(true)}
@@ -393,29 +453,33 @@ export default function Page() {
             )}
           </section>
 
-          {/* Section segmented control */}
+          {/* Quizzes, assignments & presentations for the selected day */}
           <section className="panel mt-3 rounded-3xl p-4">
             <div className="flex items-center justify-between">
-              <p className="text-[15px] font-semibold">Section</p>
-              <p className="text-[13px] text-slate-500 dark:text-slate-400">{selectedSection}</p>
+              <p className="text-[15px] font-semibold">Quiz · Assignment · Presentation</p>
+              <p className="text-[13px] text-slate-500 dark:text-slate-400">{isViewingToday ? 'Today' : selectedDateLabel}</p>
             </div>
-            <div className="mt-3 flex gap-1.5 overflow-x-auto pb-0.5 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-              {SECTIONS.map((section) => (
-                <button
-                  key={section}
-                  type="button"
-                  onClick={() => chooseSection(section)}
-                  aria-pressed={selectedSection === section}
-                  className={`shrink-0 rounded-full px-3 py-1.5 text-[13px] font-semibold transition ${
-                    selectedSection === section
-                      ? 'ios-active'
-                      : `text-slate-600 hover:bg-black/5 dark:text-slate-300 dark:hover:bg-white/10 ${FOCUS_RING}`
-                  }`}
-                >
-                  {section}
-                </button>
-              ))}
-            </div>
+            {dayReminders.length > 0 && now ? (
+              <div className="mt-1 divide-y divide-slate-200 dark:divide-white/10">
+                {dayReminders.map((r) => (
+                  <ReminderRow key={r.id} reminder={r} now={now} onToggle={toggleReminder} showDate={false} />
+                ))}
+              </div>
+            ) : (
+              <div className="mt-3 flex items-center gap-3 text-slate-400 dark:text-slate-500">
+                <span className="flex shrink-0 gap-1.5" aria-hidden="true">
+                  {(['quiz', 'assignment', 'presentation'] as const).map((t) => {
+                    const Icon = TYPE_META[t].Icon
+                    return <Icon key={t} className="size-4" />
+                  })}
+                </span>
+                <p className="text-[14px]">
+                  {dayDoneCount > 0
+                    ? `All done ${isViewingToday ? 'today' : 'for this day'}.`
+                    : `No presentation, assignment or quiz ${isViewingToday ? 'today' : 'this day'}.`}
+                </p>
+              </div>
+            )}
           </section>
 
           {/* Schedule (iOS inset grouped list) */}
@@ -447,17 +511,6 @@ export default function Page() {
             {!sectionHasData && (
               <div className="panel panel-dim mb-3 rounded-2xl px-4 py-3 text-[13px] text-slate-600 dark:text-slate-300">
                 No regular routine has been added for {selectedSection} yet.{personal ? ' Only your personal sessions are shown.' : ''}
-              </div>
-            )}
-
-            {dayReminders.length > 0 && now && (
-              <div className="panel mb-3 rounded-2xl px-4 py-1">
-                <p className="pt-3 text-[11px] font-semibold uppercase tracking-wider text-[#FF3B30]">Due this day</p>
-                <div className="divide-y divide-slate-200 dark:divide-white/10">
-                  {dayReminders.map((r) => (
-                    <ReminderRow key={r.id} reminder={r} now={now} onToggle={toggleReminder} showDate={false} />
-                  ))}
-                </div>
               </div>
             )}
 
