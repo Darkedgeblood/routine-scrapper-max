@@ -1,7 +1,7 @@
 'use client'
 
 import { Fragment, startTransition, useEffect, useMemo, useRef, useState } from 'react'
-import { BookOpen, CalendarDays, Clock, Coffee, MapPin, Plus, RotateCcw, Users } from 'lucide-react'
+import { BookOpen, Clock, Coffee, MapPin, Plus, RotateCcw, Users } from 'lucide-react'
 
 import {
   DAYS,
@@ -319,7 +319,14 @@ export default function Page() {
                 aria-label="Toggle personal mode"
                 className={`panel flex size-11 shrink-0 items-center justify-center rounded-2xl text-slate-900 dark:text-slate-100 ${FOCUS_RING}`}
               >
-                <CalendarDays className="size-5" />
+                <img
+                  src="/app-icon.png"
+                  alt=""
+                  aria-hidden="true"
+                  width={28}
+                  height={28}
+                  className="size-7 rounded-lg object-contain"
+                />
               </button>
               <div className="min-w-0">
                 <h1 className="text-[32px] font-bold leading-tight tracking-tight">
