@@ -34,11 +34,25 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v4
 
-      - name: Initialize Capacitor & Add Android
+      - name: Create Config & Assets
         run: |
           pnpm add @capacitor/core @capacitor/android
           pnpm add -D @capacitor/cli
-          npx cap init "Routine Scrapper Max" com.ifaz.routinemax --web-dir public
+          mkdir -p public
+          echo '<!DOCTYPE html><html><head><meta charset="utf-8"></head><body></body></html>' > public/index.html
+          cat << 'EOF' > capacitor.config.ts
+          import { CapacitorConfig } from '@capacitor/cli';
+          const config: CapacitorConfig = {
+            appId: 'com.ifaz.routinemax',
+            appName: 'Routine Scrapper Max',
+            webDir: 'public',
+            server: {
+              url: 'https://routine-scrapper-max.vercel.app',
+              cleartext: true
+            }
+          };
+          export default config;
+          EOF
           npx cap add android
           npx cap sync
 
