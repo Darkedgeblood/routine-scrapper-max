@@ -31,13 +31,12 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Add Capacitor & Initialize Android
-        run: |
-          pnpm add @capacitor/core @capacitor/android
-          pnpm add -D @capacitor/cli
-          npx cap init "Routine Scrapper Max" com.ifaz.routinemax --web-dir=public --yes
-          npx cap add android
-          npx cap sync android
+      - name: Add Capacitor & Sync Android
+  run: |
+    pnpm add @capacitor/core @capacitor/android
+    pnpm add -D @capacitor/cli
+    npx cap add android
+    npx cap sync android
 
       - name: Build Debug APK
         run: |
