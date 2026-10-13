@@ -175,7 +175,6 @@ export default function Page() {
   const chooseSection = (section: string) => {
     if (!SECTIONS.includes(section)) return
     setSelectedSection(section)
-    setSectionOpen(false)
     window.localStorage.setItem('routine-section', section)
   }
 
