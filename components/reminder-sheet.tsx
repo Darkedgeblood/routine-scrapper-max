@@ -32,8 +32,8 @@ export function ReminderRow({
 }: {
   reminder: Reminder
   now: Date
-  onToggle: (id: string) => void
-  onRemove?: (id: string) => void
+  onToggle: (id: string) => void | Promise<void>
+  onRemove?: (id: string) => void | Promise<void>
   showDate?: boolean
 }) {
   const meta = TYPE_META[reminder.type]
@@ -102,15 +102,17 @@ export function ReminderSheet({
   onAdd,
   onToggle,
   onRemove,
+  error,
 }: {
+  error?: string | null
   open: boolean
   onClose: () => void
   reminders: Reminder[]
   now: Date | null
   courses: CourseOption[]
-  onAdd: (input: Omit<Reminder, 'id' | 'done'>) => void
-  onToggle: (id: string) => void
-  onRemove: (id: string) => void
+  onAdd: (input: Omit<Reminder, 'id' | 'done'>) => void | Promise<void>
+  onToggle: (id: string) => void | Promise<void>
+  onRemove: (id: string) => void | Promise<void>
 }) {
   const today = now ?? new Date()
   const [type, setType] = useState<ReminderType>('quiz')
@@ -171,6 +173,11 @@ export function ReminderSheet({
         </div>
 
         <div className="overflow-y-auto px-5 pb-6">
+          {error && (
+            <p role="alert" className="mb-3 rounded-xl bg-[#FF3B30]/10 px-3 py-2 text-[13px] font-medium text-[#D70015] dark:text-[#FF453A]">
+              {error}
+            </p>
+          )}
           {/* Add form */}
           <div className="rounded-2xl border border-slate-200 p-3.5 dark:border-white/10">
             <div className="flex gap-1.5" role="group" aria-label="Type">

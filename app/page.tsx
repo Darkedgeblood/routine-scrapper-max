@@ -1,7 +1,7 @@
 'use client'
 
 import { Fragment, startTransition, useEffect, useMemo, useRef, useState } from 'react'
-import { BookOpen, CalendarDays, ChevronDown, Clock, Coffee, MapPin, Moon, Plus, RotateCcw, Sun, Users } from 'lucide-react'
+import { BookOpen, CalendarDays, ChevronDown, Clock, Coffee, MapPin, Plus, RotateCcw, Users } from 'lucide-react'
 
 import {
   DAYS,
@@ -14,7 +14,9 @@ import {
   TEACHERS,
   type RoutineItem,
 } from '@/lib/routine-data'
+import { useAuth } from '@/lib/auth'
 import { toDateKey, useReminders } from '@/lib/reminders'
+import { AccountSheet, Avatar } from '@/components/account-sheet'
 import { ReminderRow, ReminderSheet, TYPE_META, type CourseOption } from '@/components/reminder-sheet'
 
 // Shared focus ring for every interactive element.
@@ -71,7 +73,25 @@ export default function Page() {
   const [sheetOpen, setSheetOpen] = useState(false)
   const [sectionOpen, setSectionOpen] = useState(false)
   const sectionMenuRef = useRef<HTMLDivElement>(null)
-  const { reminders, pending, add: addReminder, toggle: toggleReminder, remove: removeReminder } = useReminders()
+  const auth = useAuth()
+  const { reminders, pending, error: reminderError, add: addReminder, toggle: toggleReminder, remove: removeReminder } = useReminders(auth.userId)
+  const [accountOpen, setAccountOpen] = useState(false)
+  const [accountReason, setAccountReason] = useState<string | undefined>(undefined)
+
+  const openAccount = (reason?: string) => {
+    setAccountReason(reason)
+    setAccountOpen(true)
+  }
+
+  // A password-reset email link opens the app with a recovery session: show the new-password form.
+  useEffect(() => {
+    if (auth.recovery) setAccountOpen(true)
+  }, [auth.recovery])
+
+  // Reminders belong to the account: close their sheet when signing out.
+  useEffect(() => {
+    if (!auth.user) setSheetOpen(false)
+  }, [auth.user])
   const [now, setNow] = useState<Date | null>(null)
   const [dark, setDark] = useState(true)
   const [isMounted, setIsMounted] = useState(false)
@@ -370,7 +390,11 @@ export default function Page() {
               </div>
               <button
                 type="button"
-                onClick={() => setSheetOpen(true)}
+                onClick={() =>
+                  auth.user
+                    ? setSheetOpen(true)
+                    : openAccount('Sign in with your university email to keep track of quizzes, assignments and presentations.')
+                }
                 aria-label={
                   isMounted && pending.length > 0
                     ? `Reminders, ${pending.length} pending`
@@ -390,11 +414,17 @@ export default function Page() {
               </button>
               <button
                 type="button"
-                aria-label={dark ? 'Switch to light mode' : 'Switch to dark mode'}
-                onClick={toggleDark}
-                className={`panel flex size-11 items-center justify-center rounded-full text-slate-600 transition dark:text-slate-300 ${FOCUS_RING}`}
+                onClick={() => openAccount()}
+                aria-label={auth.user ? 'Your profile' : 'Sign in'}
+                className={`panel flex size-11 items-center justify-center overflow-hidden rounded-full text-slate-600 transition dark:text-slate-300 ${FOCUS_RING}`}
               >
-                {dark ? <Sun className="size-5" /> : <Moon className="size-5" />}
+                {auth.loading ? (
+                  <span aria-hidden="true" className="size-5 animate-pulse rounded-full bg-slate-300/60 dark:bg-white/15" />
+                ) : auth.user ? (
+                  <Avatar url={auth.profile?.avatar_url} name={auth.profile?.display_name} email={auth.email} className="size-11 text-[16px]" />
+                ) : (
+                  <Avatar className="size-11 text-[16px]" />
+                )}
               </button>
             </div>
           </header>
@@ -459,7 +489,18 @@ export default function Page() {
               <p className="text-[15px] font-semibold">Quiz · Assignment · Presentation</p>
               <p className="text-[13px] text-slate-500 dark:text-slate-400">{isViewingToday ? 'Today' : selectedDateLabel}</p>
             </div>
-            {dayReminders.length > 0 && now ? (
+            {!auth.user ? (
+              <div className="mt-3 flex items-center justify-between gap-3">
+                <p className="text-[14px] text-slate-400 dark:text-slate-500">Sign in to track quizzes, assignments and presentations.</p>
+                <button
+                  type="button"
+                  onClick={() => openAccount()}
+                  className={`ios-active shrink-0 rounded-full px-4 py-1.5 text-[13px] font-semibold ${FOCUS_RING}`}
+                >
+                  Sign in
+                </button>
+              </div>
+            ) : dayReminders.length > 0 && now ? (
               <div className="mt-1 divide-y divide-slate-200 dark:divide-white/10">
                 {dayReminders.map((r) => (
                   <ReminderRow key={r.id} reminder={r} now={now} onToggle={toggleReminder} showDate={false} />
@@ -657,7 +698,17 @@ export default function Page() {
           </div>
         </nav>
 
+        <AccountSheet
+          open={accountOpen}
+          onClose={() => setAccountOpen(false)}
+          auth={auth}
+          reason={accountReason}
+          dark={dark}
+          onToggleDark={toggleDark}
+        />
+
         <ReminderSheet
+          error={reminderError}
           open={sheetOpen}
           onClose={() => setSheetOpen(false)}
           reminders={reminders}
