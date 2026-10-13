@@ -180,7 +180,7 @@ export function ReminderSheet({
           )}
           {/* Add form */}
           <div className="rounded-2xl border border-slate-200 p-3.5 dark:border-white/10">
-            <div className="flex gap-1.5" role="group" aria-label="Type">
+            <div className="grid grid-cols-3 gap-1.5 sm:flex" role="group" aria-label="Type">
               {TYPE_ORDER.map((t) => {
                 const m = TYPE_META[t]
                 return (
@@ -189,11 +189,12 @@ export function ReminderSheet({
                     type="button"
                     onClick={() => setType(t)}
                     aria-pressed={type === t}
-                    className={`flex flex-1 items-center justify-center gap-1.5 rounded-full px-2 py-1.5 text-[13px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007AFF]/60 ${
+                    className={`flex min-w-0 flex-col items-center justify-center gap-1 rounded-full px-1 py-1.5 text-[11px] font-semibold leading-tight transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007AFF]/60 sm:flex-1 sm:flex-row sm:gap-1.5 sm:px-2 sm:text-[13px] ${
                       type === t ? 'ios-active' : 'text-slate-600 hover:bg-black/5 dark:text-slate-300 dark:hover:bg-white/10'
                     }`}
                   >
-                    <m.Icon className="size-3.5" aria-hidden="true" /> {m.label}
+                    <m.Icon className="size-3.5 shrink-0" aria-hidden="true" />
+                    <span className="whitespace-nowrap">{m.label}</span>
                   </button>
                 )
               })}
