@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Camera, Eye, EyeOff, LogOut, Moon, Sun, User as UserIcon, X } from 'lucide-react'
 
 import { ALLOWED_EMAIL_DOMAIN, BIO_MAX, MIN_PASSWORD_LENGTH, NAME_MAX, type AuthResult, type AuthState } from '@/lib/auth'
+import { SECTIONS } from '@/lib/routine-data'
 
 const FIELD =
   'w-full rounded-xl border border-slate-200 bg-transparent px-3 py-2.5 text-[15px] outline-none transition-colors focus-visible:ring-2 focus-visible:ring-[#007AFF]/60 dark:border-white/10 dark:focus-visible:ring-[#0A84FF]/60'
@@ -46,6 +47,8 @@ export function AccountSheet({
   reason,
   dark,
   onToggleDark,
+  section,
+  onChooseSection,
 }: {
   open: boolean
   onClose: () => void
@@ -53,6 +56,8 @@ export function AccountSheet({
   reason?: string
   dark: boolean
   onToggleDark: () => void
+  section: string
+  onChooseSection: (section: string) => void
 }) {
   useEffect(() => {
     if (!open) return
@@ -103,9 +108,9 @@ export function AccountSheet({
           ) : auth.recovery && auth.user ? (
             <NewPasswordForm auth={auth} onDone={onClose} />
           ) : auth.user ? (
-            <ProfileView auth={auth} onClose={onClose} dark={dark} onToggleDark={onToggleDark} />
+            <ProfileView auth={auth} onClose={onClose} dark={dark} onToggleDark={onToggleDark} section={section} onChooseSection={onChooseSection} />
           ) : (
-            <SignedOutView auth={auth} reason={reason} />
+            <SignedOutView auth={auth} reason={reason} section={section} onChooseSection={onChooseSection} />
           )}
         </div>
       </div>
@@ -167,8 +172,19 @@ function PasswordField({
   )
 }
 
-function SignedOutView({ auth, reason }: { auth: AuthState; reason?: string }) {
+function SignedOutView({
+  auth,
+  reason,
+  section,
+  onChooseSection,
+}: {
+  auth: AuthState
+  reason?: string
+  section: string
+  onChooseSection: (section: string) => void
+}) {
   const [mode, setMode] = useState<Mode>('signin')
+  const [tab, setTab] = useState<'edit' | 'section'>('edit')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [busy, setBusy] = useState(false)
@@ -196,6 +212,11 @@ function SignedOutView({ auth, reason }: { auth: AuthState; reason?: string }) {
 
   return (
     <div>
+      <ProfileTabs tab={tab} onChange={setTab} />
+      {tab === 'section' ? (
+        <SectionPanel section={section} onChoose={onChooseSection} />
+      ) : (
+        <>
       {reason && <p className="mb-3 text-[14px] text-slate-500 dark:text-slate-400">{reason}</p>}
 
       {mode !== 'forgot' && (
@@ -265,6 +286,8 @@ function SignedOutView({ auth, reason }: { auth: AuthState; reason?: string }) {
           </button>
         )}
       </div>
+        </>
+      )}
     </div>
   )
 }
@@ -301,12 +324,17 @@ function ProfileView({
   onClose,
   dark,
   onToggleDark,
+  section,
+  onChooseSection,
 }: {
   auth: AuthState
   onClose: () => void
   dark: boolean
   onToggleDark: () => void
+  section: string
+  onChooseSection: (section: string) => void
 }) {
+  const [tab, setTab] = useState<'edit' | 'section'>('edit')
   const fileRef = useRef<HTMLInputElement>(null)
   const [photoBusy, setPhotoBusy] = useState(false)
   const [photoResult, setPhotoResult] = useState<AuthResult | null>(null)
@@ -324,6 +352,10 @@ function ProfileView({
 
   return (
     <div>
+      <ProfileTabs tab={tab} onChange={setTab} />
+      {tab === 'section' ? (
+        <SectionPanel section={section} onChoose={onChooseSection} />
+      ) : (
       <div className="flex flex-col items-center gap-2 pb-4 pt-1">
         <Avatar url={auth.profile?.avatar_url} name={auth.profile?.display_name} email={auth.email} className="size-24 text-[36px]" />
         <input ref={fileRef} type="file" accept="image/*" onChange={onPick} className="hidden" />
@@ -340,6 +372,7 @@ function ProfileView({
       </div>
 
       <ProfileForm key={`${auth.userId}-${auth.profile ? 'loaded' : 'loading'}`} auth={auth} />
+      )}
 
       <button
         type="button"
@@ -367,6 +400,59 @@ function ProfileView({
       >
         <LogOut className="size-4" aria-hidden="true" /> Sign out
       </button>
+    </div>
+  )
+}
+
+// Edit / Section switcher shown at the top of the profile sheet.
+function ProfileTabs({ tab, onChange }: { tab: 'edit' | 'section'; onChange: (tab: 'edit' | 'section') => void }) {
+  return (
+    <div className="mb-3 flex gap-1 rounded-full bg-black/5 p-1 dark:bg-white/10" role="group" aria-label="Profile options">
+      {(['edit', 'section'] as const).map((t) => (
+        <button
+          key={t}
+          type="button"
+          onClick={() => onChange(t)}
+          aria-pressed={tab === t}
+          className={`flex-1 rounded-full py-1.5 text-[13px] font-semibold transition-colors ${
+            tab === t
+              ? 'ios-active'
+              : 'text-slate-600 hover:bg-black/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007AFF]/60 dark:text-slate-300 dark:hover:bg-white/10'
+          }`}
+        >
+          {t === 'edit' ? 'Edit' : 'Section'}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+// Shows the currently chosen section and lets the user switch; saves instantly.
+function SectionPanel({ section, onChoose }: { section: string; onChoose: (section: string) => void }) {
+  return (
+    <div className="pb-1">
+      <div className="mb-3 flex items-center justify-between rounded-xl bg-black/[0.03] px-3 py-2.5 dark:bg-white/[0.04]">
+        <span className="text-[12px] font-medium text-slate-500 dark:text-slate-400">Current section</span>
+        <span className="text-[15px] font-semibold tabular-nums">{section}</span>
+      </div>
+      <div className="grid grid-cols-4 gap-1.5">
+        {SECTIONS.map((s) => (
+          <button
+            key={s}
+            type="button"
+            onClick={() => onChoose(s)}
+            aria-pressed={section === s}
+            className={`rounded-full px-1 py-2 text-[13px] font-semibold tabular-nums transition ${
+              section === s
+                ? 'ios-active'
+                : 'text-slate-600 hover:bg-black/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007AFF]/60 dark:text-slate-300 dark:hover:bg-white/10'
+            }`}
+          >
+            {s}
+          </button>
+        ))}
+      </div>
+      <p className="mt-3 text-[12px] text-slate-400 dark:text-slate-500">The routine updates as soon as you pick a section.</p>
     </div>
   )
 }
