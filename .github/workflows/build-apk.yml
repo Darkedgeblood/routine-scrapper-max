@@ -57,6 +57,32 @@ jobs:
           npx cap add android
           npx cap sync
           npx @capacitor/assets generate --android --assetPath assets --androidProject android --iconBackgroundColor '#e9f2fb'
+          # Android 12+ inserts a system splash before the app's own animated splash.
+          # Keep the required native launch window black and icon-free so the custom
+          # animated splash is the first branded screen users see.
+          python3 - <<'PY'
+          from pathlib import Path
+
+          styles = Path('android/app/src/main/res/values/styles.xml')
+          content = styles.read_text()
+          start = content.find('<style name="AppTheme.NoActionBarLaunch"')
+          end = content.find('</style>', start)
+          if start < 0 or end < 0:
+              raise SystemExit('Could not find Capacitor launch theme in styles.xml')
+
+          launch_theme = content[start:end]
+          launch_theme = launch_theme.replace(
+              '<item name="android:background">@drawable/splash</item>',
+              '<item name="android:background">@android:color/black</item>',
+          )
+          launch_theme += '''
+              <item name="android:windowSplashScreenAnimatedIcon">@android:color/transparent</item>
+              <item name="windowSplashScreenAnimatedIcon">@android:color/transparent</item>
+              <item name="android:windowSplashScreenBackground">@android:color/black</item>
+              <item name="windowSplashScreenBackground">@android:color/black</item>'''
+          content = content[:start] + launch_theme + content[end:]
+          styles.write_text(content)
+          PY
 
       - name: Build Debug APK
         run: |
