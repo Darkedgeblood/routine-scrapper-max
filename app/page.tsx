@@ -317,15 +317,15 @@ export default function Page() {
                 type="button"
                 onClick={handleLogoTap}
                 aria-label="Toggle personal mode"
-                className={`panel flex size-11 shrink-0 items-center justify-center rounded-2xl text-slate-900 dark:text-slate-100 ${FOCUS_RING}`}
+                className={`flex size-11 shrink-0 items-center justify-center ${FOCUS_RING}`}
               >
                 <img
                   src="/app-icon.png"
                   alt=""
                   aria-hidden="true"
-                  width={28}
-                  height={28}
-                  className="size-7 rounded-lg object-contain"
+                  width={32}
+                  height={32}
+                  className="size-8 object-contain"
                 />
               </button>
               <div className="min-w-0">
