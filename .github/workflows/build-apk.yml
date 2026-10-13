@@ -33,15 +33,14 @@ jobs:
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v4
-        with:
-          packages: 'platforms;android-34 build-tools;34.0.0'
 
-      - name: Add Capacitor & Sync Android
+      - name: Initialize Capacitor & Add Android
         run: |
           pnpm add @capacitor/core @capacitor/android
           pnpm add -D @capacitor/cli
+          npx cap init "Routine Scrapper Max" com.ifaz.routinemax --web-dir public
           npx cap add android
-          npx cap sync android
+          npx cap sync
 
       - name: Build Debug APK
         run: |
