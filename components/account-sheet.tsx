@@ -356,6 +356,7 @@ function ProfileView({
       {tab === 'section' ? (
         <SectionPanel section={section} onChoose={onChooseSection} />
       ) : (
+        <>
       <div className="flex flex-col items-center gap-2 pb-4 pt-1">
         <Avatar url={auth.profile?.avatar_url} name={auth.profile?.display_name} email={auth.email} className="size-24 text-[36px]" />
         <input ref={fileRef} type="file" accept="image/*" onChange={onPick} className="hidden" />
@@ -372,6 +373,7 @@ function ProfileView({
       </div>
 
       <ProfileForm key={`${auth.userId}-${auth.profile ? 'loaded' : 'loading'}`} auth={auth} />
+        </>
       )}
 
       <button
