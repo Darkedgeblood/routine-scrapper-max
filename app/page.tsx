@@ -323,9 +323,9 @@ export default function Page() {
                   src="/app-icon.png"
                   alt=""
                   aria-hidden="true"
-                  width={32}
-                  height={32}
-                  className="size-8 object-contain"
+                  width={44}
+                  height={44}
+                  className="size-11 object-contain"
                 />
               </button>
               <div className="min-w-0">
