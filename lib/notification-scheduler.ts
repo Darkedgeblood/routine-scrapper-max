@@ -140,7 +140,7 @@ export async function syncScheduledNotifications({
 
   const unique = [...new Map(scheduled.map((item) => [item.id, item])).values()]
   if (Capacitor.isNativePlatform()) {
-    if (unique.length === 0) return
+    if (unique.length === 0) return 0
     try {
       await LocalNotifications.createChannel({ id: CHANNEL_ID, name: 'Routine reminders', importance: 4 })
       const result = await LocalNotifications.schedule({
