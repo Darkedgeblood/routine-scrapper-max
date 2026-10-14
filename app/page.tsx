@@ -7,6 +7,7 @@ import {
   DAYS,
   FULL_DAYS,
   MY_SKIPPED_COURSES,
+  MY_SKIPPED_LABS,
   PERSONAL_DATA,
   ROUTINE_DATA,
   SECTIONS,
@@ -50,13 +51,17 @@ function isSkippedCourse(item: RoutineItem, personal: boolean) {
   return personal && MY_SKIPPED_COURSES.includes(item.courseCode)
 }
 
-// Classes shown greyed out (personal mode only); they don't count towards "next up" or totals.
-function matchesLabGroup(item: RoutineItem, group: string) {
-  return !item.subSection || group === 'all' || item.subSection.slice(-1) === group
+// Classes outside the selected lab group stay visible but are dimmed and excluded from totals.
+function isOtherLabGroup(item: RoutineItem, group: string) {
+  return !!item.subSection && group !== 'all' && item.subSection.slice(-1) !== group
 }
 
-function isInactive(item: RoutineItem, personal: boolean) {
-  return isSkippedCourse(item, personal)
+function isInactive(item: RoutineItem, personal: boolean, group: string) {
+  return (
+    isSkippedCourse(item, personal) ||
+    (personal && !!item.subSection && MY_SKIPPED_LABS.includes(item.subSection)) ||
+    isOtherLabGroup(item, group)
+  )
 }
 
 function teacherLabel(initials: string) {
@@ -207,8 +212,8 @@ export default function Page() {
   )].sort(), [selectedSection])
 
   const selectedSectionClasses = useMemo(
-    () => ROUTINE_DATA.filter((item) => item.section === selectedSection && matchesLabGroup(item, labGroup)),
-    [selectedSection, labGroup]
+    () => ROUTINE_DATA.filter((item) => item.section === selectedSection),
+    [selectedSection]
   )
 
   const enableNotifications = async () => {
@@ -258,7 +263,7 @@ export default function Page() {
   const dayClasses = useMemo(
     () =>
       (personal ? [...ROUTINE_DATA, ...PERSONAL_DATA] : ROUTINE_DATA)
-        .filter((item) => item.day === FULL_DAYS[selectedDay] && (item.section === selectedSection || item.isRetake) && matchesLabGroup(item, labGroup))
+        .filter((item) => item.day === FULL_DAYS[selectedDay] && (item.section === selectedSection || item.isRetake))
         .sort((a, b) => a.startMinutes - b.startMinutes),
     [selectedDay, selectedSection, personal, labGroup]
   )
@@ -272,8 +277,7 @@ export default function Page() {
         (item) =>
           item.day === FULL_DAYS[day] &&
           (item.section === selectedSection || item.isRetake) &&
-          matchesLabGroup(item, labGroup) &&
-          !isInactive(item, personal)
+          !isInactive(item, personal, labGroup)
       ).length
     }
     return counts
@@ -284,7 +288,7 @@ export default function Page() {
     const source = personal ? [...ROUTINE_DATA, ...PERSONAL_DATA] : ROUTINE_DATA
     const seen = new Map<string, string>()
     for (const item of source) {
-      if ((item.section === selectedSection || item.isRetake) && matchesLabGroup(item, labGroup) && !seen.has(item.courseCode)) {
+      if ((item.section === selectedSection || item.isRetake) && !seen.has(item.courseCode)) {
         seen.set(item.courseCode, item.courseTitle.replace(/ Lab$/, ''))
       }
     }
@@ -304,10 +308,10 @@ export default function Page() {
   )
 
   const totalDurationMinutes = dayClasses
-    .filter((item) => !isInactive(item, personal))
+    .filter((item) => !isInactive(item, personal, labGroup))
     .reduce((total, item) => total + item.endMinutes - item.startMinutes, 0)
   const totalDurationLabel = `Total: ${Math.floor(totalDurationMinutes / 60)}h ${totalDurationMinutes % 60}m`
-  const regularCount = dayClasses.filter((item) => !item.isRetake && !isSkippedCourse(item, personal)).length
+  const regularCount = dayClasses.filter((item) => !item.isRetake && !isInactive(item, personal, labGroup)).length
   const currentMinutes = now ? now.getHours() * 60 + now.getMinutes() : -1
   const weekDates = useMemo(() => (now ? getWeekDates(now) : null), [now])
   const selectedDate = weekDates ? weekDates[DAYS.indexOf(selectedDay)] : null
@@ -321,7 +325,7 @@ export default function Page() {
   const isViewingToday = isMounted && now !== null && selectedDay === getToday(now)
   // Friday has no tab; the tabs then show the coming week.
   const isNextWeek = isMounted && now !== null && getToday(now) === null
-  const activeClasses = dayClasses.filter((item) => !isInactive(item, personal))
+  const activeClasses = dayClasses.filter((item) => !isInactive(item, personal, labGroup))
   const ongoingClass = isViewingToday
     ? activeClasses.find((item) => item.startMinutes <= currentMinutes && currentMinutes < item.endMinutes)
     : undefined
@@ -596,9 +600,9 @@ export default function Page() {
                 const gap = previous ? item.startMinutes - previous.endMinutes : 0
                 const gapHours = Math.floor(gap / 60)
                 const gapMins = gap % 60
-                const inactive = isInactive(item, personal)
+                const inactive = isInactive(item, personal, labGroup)
                 const ongoing = ongoingClass?.id === item.id
-                const skippedLabel = isSkippedCourse(item, personal) ? 'Not registered' : inactive ? `${item.subSection} Lab (skipped)` : ''
+                const inactiveLabel = isSkippedCourse(item, personal) ? 'Not registered' : isOtherLabGroup(item, labGroup) ? 'Other group' : inactive ? `${item.subSection} Lab (skipped)` : ''
 
                 return (
                   <Fragment key={item.id}>
@@ -646,7 +650,7 @@ export default function Page() {
                                 : 'bg-black/5 text-slate-500 dark:bg-white/10 dark:text-slate-400'
                             }`}
                           >
-                            {inactive ? skippedLabel : item.isRetake ? 'Retake' : `Section ${item.section}`}
+                            {inactive ? inactiveLabel : item.isRetake ? 'Retake' : `Section ${item.section}`}
                           </span>
                           {item.subSection && (
                             <span className="rounded-full bg-black/5 px-2 py-0.5 text-[10px] font-semibold text-slate-500 dark:bg-white/10 dark:text-slate-400">
