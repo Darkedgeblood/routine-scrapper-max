@@ -1,7 +1,7 @@
 'use client'
 
 import { Fragment, startTransition, useEffect, useMemo, useRef, useState } from 'react'
-import { BookOpen, CircleAlert, Clock, Coffee, MapPin, Plus, RotateCcw, Settings2, Users, X } from 'lucide-react'
+import { BookOpen, CircleAlert, Clock, Coffee, MapPin, Plus, Settings2, Users, X } from 'lucide-react'
 
 import {
   DAYS,
@@ -308,9 +308,6 @@ export default function Page() {
     .reduce((total, item) => total + item.endMinutes - item.startMinutes, 0)
   const totalDurationLabel = `Total: ${Math.floor(totalDurationMinutes / 60)}h ${totalDurationMinutes % 60}m`
   const regularCount = dayClasses.filter((item) => !item.isRetake && !isSkippedCourse(item, personal)).length
-  const retakeItems = dayClasses.filter((item) => item.isRetake)
-  const retakeCount = retakeItems.length
-  const retakeCourses = [...new Set(retakeItems.map((item) => item.courseCode))]
   const currentMinutes = now ? now.getHours() * 60 + now.getMinutes() : -1
   const weekDates = useMemo(() => (now ? getWeekDates(now) : null), [now])
   const selectedDate = weekDates ? weekDates[DAYS.indexOf(selectedDay)] : null
@@ -503,37 +500,27 @@ export default function Page() {
 
           {/* Today at a glance */}
           <section className={`mt-3 grid gap-2.5 ${personal ? 'grid-cols-3' : 'grid-cols-2'}`}>
-            <div className={`panel flex min-w-0 flex-col gap-2 rounded-2xl p-3 transition-opacity sm:rounded-3xl sm:p-4 ${regularCount === 0 ? 'opacity-50' : ''}`}>
-              <div className="flex items-center gap-2">
-                <BookOpen className="size-5 shrink-0 text-slate-400" />
+            <div className={`panel flex min-w-0 flex-col gap-2 rounded-2xl p{/* Today at a glance */}
+          <section className="mt-3 grid grid-cols-2 gap-3">
+            <div className={`panel flex min-w-0 items-center gap-3 rounded-3xl p-4 transition-opacity ${regularCount === 0 ? 'opacity-50' : ''}`}>
+              <BookOpen className="size-5 shrink-0 text-slate-400" />
+              <div className="min-w-0">
                 <p className="text-xl font-bold leading-none tabular-nums">{regularCount}</p>
+                <p className="mt-1 whitespace-nowrap text-[11px] font-medium text-slate-500 dark:text-slate-400">classes today</p>
               </div>
-              <p className="text-[11px] font-medium leading-tight text-slate-500 dark:text-slate-400">classes today</p>
             </div>
-            <div className={`panel flex min-w-0 flex-col gap-2 rounded-2xl p-3 transition-opacity sm:rounded-3xl sm:p-4 ${totalDurationMinutes === 0 ? 'opacity-50' : ''}`}>
-              <div className="flex items-center gap-2">
-                <Clock className="size-5 shrink-0 text-slate-400" />
-                <p className="whitespace-nowrap text-[17px] font-bold leading-none tabular-nums sm:text-xl">
+            <div className={`panel flex min-w-0 items-center gap-3 rounded-3xl p-4 transition-opacity ${totalDurationMinutes === 0 ? 'opacity-50' : ''}`}>
+              <Clock className="size-5 shrink-0 text-slate-400" />
+              <div className="min-w-0">
+                <p className="whitespace-nowrap text-lg font-bold leading-none tabular-nums sm:text-xl">
                   {Math.floor(totalDurationMinutes / 60)}h{totalDurationMinutes % 60 > 0 ? ` ${totalDurationMinutes % 60}m` : ''}
                 </p>
+                <p className="mt-1 whitespace-nowrap text-[11px] font-medium text-slate-500 dark:text-slate-400">class time</p>
               </div>
-              <p className="text-[11px] font-medium leading-tight text-slate-500 dark:text-slate-400">class time</p>
             </div>
-            {personal && (
-              <div className="panel flex min-w-0 flex-col gap-2 rounded-2xl p-3 sm:rounded-3xl sm:p-4">
-                <div className="flex items-center gap-2">
-                  <RotateCcw className="size-5 shrink-0 text-amber-500" />
-                  <p className="text-xl font-bold leading-none tabular-nums">{retakeCount}</p>
-                </div>
-                <p className="text-[11px] font-medium leading-tight text-slate-500 dark:text-slate-400">retakes{retakeCourses.length > 0 ? ` · ${retakeCourses.join(', ')}` : ''}</p>
-              </div>
-            )}
           </section>
 
-          {/* Quizzes, assignments & presentations for the selected day */}
-          <section className="panel mt-3 rounded-3xl p-4">
-            <div className="flex items-center justify-between">
-              <p className="text-[15px] font-semibold">Quiz · Assignment · Presentation</p>
+               <p className="text-[15px] font-semibold">Quiz · Assignment · Presentation</p>
               <p className="text-[13px] text-slate-500 dark:text-slate-400">{isViewingToday ? 'Today' : selectedDateLabel}</p>
             </div>
             {!auth.user ? (
