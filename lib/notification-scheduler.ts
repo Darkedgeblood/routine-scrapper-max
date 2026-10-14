@@ -43,12 +43,19 @@ function browserNotify(title: string, body: string) {
 
 export async function requestNotificationPermission() {
   if (Capacitor.isNativePlatform()) {
+    if (!Capacitor.isPluginAvailable('LocalNotifications')) {
+      throw new Error('This installed APK does not include native notification support. Install the latest APK from GitHub Releases.')
+    }
+
+    // The runtime display permission is the permission required to schedule alerts.
+    // Avoid areEnabled() here: it performs an additional OS-level settings query and
+    // has caused setup to fail on some Android builds even after permission is granted.
     const current = await LocalNotifications.checkPermissions()
-    const permission = current.display === 'granted' ? current : await LocalNotifications.requestPermissions()
-    if (permission.display !== 'granted') return false
-    const enabled = await LocalNotifications.areEnabled()
-    return enabled.value
+    if (current.display === 'granted') return true
+    const requested = await LocalNotifications.requestPermissions()
+    return requested.display === 'granted'
   }
+
   if (typeof Notification === 'undefined') return false
   const permission = Notification.permission === 'granted' ? 'granted' : await Notification.requestPermission()
   return permission === 'granted'

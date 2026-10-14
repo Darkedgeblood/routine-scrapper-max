@@ -230,8 +230,9 @@ export default function Page() {
       window.localStorage.setItem('routine-notifications-enabled', '1')
       setNotificationsEnabled(true)
       setNotificationStatus('Permission granted. Scheduling your upcoming alerts…')
-    } catch {
-      setNotificationError('Could not enable alerts. Check notification permission in your phone settings and try again.')
+    } catch (error) {
+      const reason = error instanceof Error && error.message ? error.message : 'Android could not check notification permission.'
+      setNotificationError(`Could not enable alerts: ${reason} Check notification permission in your phone settings and try again.`)
     }
   }
 
