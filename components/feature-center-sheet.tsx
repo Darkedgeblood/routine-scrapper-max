@@ -127,8 +127,8 @@ export function FeatureCenterSheet({
 
           <section className="mt-4 rounded-2xl border border-slate-200 p-3.5 dark:border-white/10">
             <h3 className="text-[14px] font-semibold">Lab group · {section}</h3>
-            <p className="mt-1 text-[12px] text-slate-500 dark:text-slate-400">Choose the labs you attend. Untagged classes are always shown.</p>
-            <div className="mt-3 grid grid-cols-3 gap-1.5" role="group" aria-label="Lab group filter">
+            <p className="mt-1 text-[12px] text-slate-500 dark:text-slate-400">Choose your group to highlight its labs. Other groups stay visible but dimmed.</p>
+            <div className="mt-3 grid grid-cols-3 gap-1.5" role="group" aria-label="Highlight lab group">
               {[
                 { value: 'all', label: 'All groups' },
                 ...labGroups.map((group) => ({ value: group, label: `Group ${group}` })),
