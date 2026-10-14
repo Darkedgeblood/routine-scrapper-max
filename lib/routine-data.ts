@@ -209,4 +209,5 @@ export const PERSONAL_DATA: RoutineItem[] = [
 
 // Personal settings, applied only in personal mode.
 export const MY_SKIPPED_COURSES = ['AOL101'] // courses I didn't take
+export const MY_SKIPPED_LABS = ['69_P2'] // personal lab sections I don't attend
 
