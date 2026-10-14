@@ -4,6 +4,7 @@ import type { Reminder } from '@/lib/reminders'
 import type { RoutineItem } from '@/lib/routine-data'
 
 let browserTimers: ReturnType<typeof setTimeout>[] = []
+const CHANNEL_ID = 'routine-alerts'
 
 function idFor(value: string, offset = 1) {
   let hash = 2166136261
@@ -23,6 +24,13 @@ function nextClassAlarm(item: RoutineItem, leadMinutes: number, weekOffset: numb
   return date
 }
 
+function localDateKey(date: Date) {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
 function browserNotify(title: string, body: string) {
   if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return
   void navigator.serviceWorker?.getRegistration().then((registration) => {
@@ -37,11 +45,37 @@ export async function requestNotificationPermission() {
   if (Capacitor.isNativePlatform()) {
     const current = await LocalNotifications.checkPermissions()
     const permission = current.display === 'granted' ? current : await LocalNotifications.requestPermissions()
-    return permission.display === 'granted'
+    if (permission.display !== 'granted') return false
+    const enabled = await LocalNotifications.areEnabled()
+    return enabled.value
   }
   if (typeof Notification === 'undefined') return false
   const permission = Notification.permission === 'granted' ? 'granted' : await Notification.requestPermission()
   return permission === 'granted'
+}
+
+export async function sendTestNotification() {
+  const title = 'Routine notifications are on'
+  const body = 'Your phone can now show local reminders.'
+
+  if (Capacitor.isNativePlatform()) {
+    await LocalNotifications.createChannel({ id: CHANNEL_ID, name: 'Routine reminders', importance: 4 })
+    await LocalNotifications.schedule({
+      notifications: [{
+        id: 2_000_001,
+        title,
+        body,
+        schedule: { at: new Date(Date.now() + 5_000), allowWhileIdle: true, isExactNotification: false },
+        channelId: CHANNEL_ID,
+      }],
+    })
+    return
+  }
+
+  if (typeof Notification === 'undefined' || Notification.permission !== 'granted') {
+    throw new Error('Notifications are not permitted.')
+  }
+  browserTimers.push(setTimeout(() => browserNotify(title, body), 5_000))
 }
 
 async function clearNativeNotifications() {
@@ -64,23 +98,26 @@ export async function syncScheduledNotifications({
   classes,
   reminders,
   leadMinutes,
+  holidayDates = [],
 }: {
   enabled: boolean
   classes: RoutineItem[]
   reminders: Reminder[]
   leadMinutes: number
-}) {
+  holidayDates?: string[]
+}): Promise<number> {
   browserTimers.forEach(clearTimeout)
   browserTimers = []
   if (Capacitor.isNativePlatform()) await clearNativeNotifications()
-  if (!enabled) return
+  if (!enabled) return 0
 
   const now = new Date()
+  const holidayDateSet = new Set(holidayDates)
   const scheduled: { id: number; title: string; body: string; at: Date }[] = []
   for (const item of classes) {
     for (let week = 0; week < 6; week++) {
       const at = nextClassAlarm(item, leadMinutes, week, now)
-      if (at > now) scheduled.push({
+      if (at > now && !holidayDateSet.has(localDateKey(at))) scheduled.push({
         id: idFor(`class|${item.id}|${at.toISOString()}`),
         title: `Class soon · ${item.courseCode}`,
         body: `${item.startTime} · ${item.room}${item.subSection ? ` · ${item.subSection}` : ''}`,
@@ -103,31 +140,31 @@ export async function syncScheduledNotifications({
 
   const unique = [...new Map(scheduled.map((item) => [item.id, item])).values()]
   if (Capacitor.isNativePlatform()) {
-    if (unique.length === 0) return
+    if (unique.length === 0) return 0
     try {
-      await LocalNotifications.createChannel({ id: 'routine-alerts', name: 'Routine reminders', importance: 4 })
-      await LocalNotifications.schedule({
+      await LocalNotifications.createChannel({ id: CHANNEL_ID, name: 'Routine reminders', importance: 4 })
+      const result = await LocalNotifications.schedule({
         notifications: unique.map(({ id, title, body, at }) => ({
           id,
           title,
           body,
           schedule: { at, allowWhileIdle: true, isExactNotification: false },
-          channelId: 'routine-alerts',
-          smallIcon: 'ic_stat_icon_config_sample',
+          channelId: CHANNEL_ID,
         })),
       })
-    } catch {
-      // Permission settings can change outside the app; users can enable alerts again in Settings.
+      return result.notifications.length
+    } catch (error) {
+      throw error instanceof Error ? error : new Error('Native notification scheduling failed.')
     }
-    return
   }
 
-  if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return
+  if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return 0
   const maxDelay = 2_147_000_000
   for (const item of unique) {
     const delay = item.at.getTime() - Date.now()
     if (delay < 0 || delay > maxDelay) continue
     browserTimers.push(setTimeout(() => browserNotify(item.title, item.body), delay))
   }
+  return browserTimers.length
 }
 

@@ -23,8 +23,10 @@ export function FeatureCenterSheet({
   notificationLead,
   onEnableNotifications,
   onDisableNotifications,
+  onTestNotification,
   onLeadChange,
   notificationError,
+  notificationStatus,
   onExportCalendar,
 }: {
   open: boolean
@@ -40,8 +42,10 @@ export function FeatureCenterSheet({
   notificationLead: number
   onEnableNotifications: () => void | Promise<void>
   onDisableNotifications: () => void
+  onTestNotification: () => void | Promise<void>
   onLeadChange: (minutes: number) => void
   notificationError: string | null
+  notificationStatus: string | null
   onExportCalendar: (weeks: number) => void
 }) {
   const [weeks, setWeeks] = useState(16)
@@ -167,7 +171,9 @@ export function FeatureCenterSheet({
                 Enable notifications
               </button>
             )}
-            {notificationError && <p role="status" className="mt-2 text-[12px] text-amber-600 dark:text-amber-400">{notificationError}</p>}
+            {notificationsEnabled && <button type="button" onClick={() => void onTestNotification()} className={`mt-3 w-full rounded-full border border-slate-200 py-2 text-[12px] font-semibold text-slate-600 dark:border-white/10 dark:text-slate-300 ${FOCUS}`}>Send test alert</button>}
+            {notificationStatus && <p role="status" className="mt-2 text-[12px] text-slate-500 dark:text-slate-400">{notificationStatus}</p>}
+            {notificationError && <p role="alert" className="mt-2 text-[12px] text-amber-600 dark:text-amber-400">{notificationError}</p>}
             {notificationsEnabled && !('Notification' in window) && <p className="mt-2 text-[11px] text-slate-400">This browser may not support notifications. The Android app uses scheduled device alerts.</p>}
             {notificationsEnabled && <p className="mt-2 text-[11px] text-slate-400 dark:text-slate-500">On Android, alerts are scheduled on your device and can arrive with the app closed. In a browser, keep the page open for scheduled alerts.</p>}
           </section>

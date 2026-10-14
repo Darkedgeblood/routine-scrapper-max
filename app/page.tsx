@@ -1,7 +1,7 @@
 'use client'
 
 import { Fragment, startTransition, useEffect, useMemo, useRef, useState } from 'react'
-import { BookOpen, CircleAlert, Clock, Coffee, MapPin, Plus, Settings2, Users, X } from 'lucide-react'
+import { BookOpen, CalendarDays, CircleAlert, Clock, Coffee, MapPin, Plus, Settings2, Users, X } from 'lucide-react'
 
 import {
   DAYS,
@@ -20,7 +20,8 @@ import { AccountSheet, Avatar } from '@/components/account-sheet'
 import { ReminderRow, ReminderSheet, TYPE_META, type CourseOption } from '@/components/reminder-sheet'
 import { FeatureCenterSheet } from '@/components/feature-center-sheet'
 import { downloadRoutineCalendar } from '@/lib/calendar-export'
-import { clearScheduledNotifications, requestNotificationPermission, syncScheduledNotifications } from '@/lib/notification-scheduler'
+import { clearScheduledNotifications, requestNotificationPermission, sendTestNotification, syncScheduledNotifications } from '@/lib/notification-scheduler'
+import { BANGLADESH_NATIONAL_HOLIDAYS, getBangladeshNationalHoliday } from '@/lib/bangladesh-holidays'
 import { checkForScheduleChanges, dismissScheduleNotice, type ScheduleNotice } from '@/lib/schedule-changes'
 
 // Shared focus ring for every interactive element.
@@ -89,6 +90,7 @@ export default function Page() {
   const [notificationsEnabled, setNotificationsEnabled] = useState(false)
   const [notificationLead, setNotificationLead] = useState(10)
   const [notificationError, setNotificationError] = useState<string | null>(null)
+  const [notificationStatus, setNotificationStatus] = useState<string | null>(null)
   const [accountReason, setAccountReason] = useState<string | undefined>(undefined)
 
   const openAccount = (reason?: string) => {
@@ -218,16 +220,18 @@ export default function Page() {
 
   const enableNotifications = async () => {
     setNotificationError(null)
+    setNotificationStatus(null)
     try {
       const granted = await requestNotificationPermission()
       if (!granted) {
-        setNotificationError('Allow notifications in your device or browser settings, then try again.')
+        setNotificationError('Notifications are blocked. Allow them for Routine Scrapper Max in your phone settings, then try again.')
         return
       }
       window.localStorage.setItem('routine-notifications-enabled', '1')
       setNotificationsEnabled(true)
+      setNotificationStatus('Permission granted. Scheduling your upcoming alerts…')
     } catch {
-      setNotificationError('Notifications could not be enabled on this device.')
+      setNotificationError('Could not enable alerts. Check notification permission in your phone settings and try again.')
     }
   }
 
@@ -235,6 +239,17 @@ export default function Page() {
     window.localStorage.setItem('routine-notifications-enabled', '0')
     setNotificationsEnabled(false)
     setNotificationError(null)
+    setNotificationStatus('Notifications are off.')
+  }
+
+  const testNotification = async () => {
+    setNotificationError(null)
+    try {
+      await sendTestNotification()
+      setNotificationStatus('Test alert scheduled for 5 seconds from now.')
+    } catch {
+      setNotificationError('Test alert could not be scheduled. Check your phone notification settings.')
+    }
   }
 
   const changeNotificationLead = (minutes: number) => {
@@ -250,29 +265,48 @@ export default function Page() {
 
   useEffect(() => {
     if (!isMounted) return
+    let cancelled = false
     void syncScheduledNotifications({
       enabled: notificationsEnabled,
       classes: selectedSectionClasses,
       reminders: reminders.filter((item) => !item.done),
       leadMinutes: notificationLead,
+      holidayDates: BANGLADESH_NATIONAL_HOLIDAYS.map((holiday) => holiday.date),
+    }).then((count) => {
+      if (!cancelled && notificationsEnabled) {
+        setNotificationStatus(count > 0 ? `${count} upcoming alerts scheduled on this device.` : 'No upcoming alerts need scheduling yet.')
+      }
+    }).catch(() => {
+      if (!cancelled) setNotificationError('Could not schedule alerts. Check phone notification settings and try again.')
     })
+    return () => { cancelled = true }
   }, [isMounted, notificationsEnabled, selectedSectionClasses, reminders, notificationLead])
 
   useEffect(() => () => { void clearScheduledNotifications() }, [])
+
+  const weekDates = useMemo(() => (now ? getWeekDates(now) : null), [now])
+  const selectedDate = weekDates ? weekDates[DAYS.indexOf(selectedDay)] : null
+  const selectedHoliday = getBangladeshNationalHoliday(selectedDate)
 
   const dayClasses = useMemo(
     () =>
       (personal ? [...ROUTINE_DATA, ...PERSONAL_DATA] : ROUTINE_DATA)
         .filter((item) => item.day === FULL_DAYS[selectedDay] && (item.section === selectedSection || item.isRetake))
         .sort((a, b) => a.startMinutes - b.startMinutes),
-    [selectedDay, selectedSection, personal, labGroup]
+    [selectedDay, selectedSection, personal]
   )
+  const visibleDayClasses = selectedHoliday ? [] : dayClasses
 
   // How many active classes each day of the week has (shown under each day tab).
   const weekCounts = useMemo(() => {
     const source = personal ? [...ROUTINE_DATA, ...PERSONAL_DATA] : ROUTINE_DATA
     const counts = {} as Record<(typeof DAYS)[number], number>
     for (const day of DAYS) {
+      const date = weekDates?.[DAYS.indexOf(day)]
+      if (date && getBangladeshNationalHoliday(date)) {
+        counts[day] = 0
+        continue
+      }
       counts[day] = source.filter(
         (item) =>
           item.day === FULL_DAYS[day] &&
@@ -281,7 +315,7 @@ export default function Page() {
       ).length
     }
     return counts
-  }, [selectedSection, personal, labGroup])
+  }, [selectedSection, personal, labGroup, weekDates])
 
   // Courses offered in the reminder form: this section's classes plus retakes (and personal sessions).
   const courseOptions = useMemo<CourseOption[]>(() => {
@@ -307,14 +341,12 @@ export default function Page() {
     [selectedSection]
   )
 
-  const totalDurationMinutes = dayClasses
+  const totalDurationMinutes = visibleDayClasses
     .filter((item) => !isInactive(item, personal, labGroup))
     .reduce((total, item) => total + item.endMinutes - item.startMinutes, 0)
   const totalDurationLabel = `Total: ${Math.floor(totalDurationMinutes / 60)}h ${totalDurationMinutes % 60}m`
-  const regularCount = dayClasses.filter((item) => !item.isRetake && !isInactive(item, personal, labGroup)).length
+  const regularCount = visibleDayClasses.filter((item) => !item.isRetake && !isInactive(item, personal, labGroup)).length
   const currentMinutes = now ? now.getHours() * 60 + now.getMinutes() : -1
-  const weekDates = useMemo(() => (now ? getWeekDates(now) : null), [now])
-  const selectedDate = weekDates ? weekDates[DAYS.indexOf(selectedDay)] : null
   const selectedDateLabel = selectedDate
     ? selectedDate.toLocaleDateString('en-US', { day: 'numeric', month: 'short' })
     : ''
@@ -325,7 +357,7 @@ export default function Page() {
   const isViewingToday = isMounted && now !== null && selectedDay === getToday(now)
   // Friday has no tab; the tabs then show the coming week.
   const isNextWeek = isMounted && now !== null && getToday(now) === null
-  const activeClasses = dayClasses.filter((item) => !isInactive(item, personal, labGroup))
+  const activeClasses = visibleDayClasses.filter((item) => !isInactive(item, personal, labGroup))
   const ongoingClass = isViewingToday
     ? activeClasses.find((item) => item.startMinutes <= currentMinutes && currentMinutes < item.endMinutes)
     : undefined
@@ -333,10 +365,12 @@ export default function Page() {
   const upcomingClass = isViewingToday
     ? activeClasses.find((item) => item.startMinutes > currentMinutes)
     : activeClasses[0]
-  const upNextLabel = isViewingToday ? 'Next up' : 'First class'
+  const upNextLabel = selectedHoliday ? 'National holiday' : isViewingToday ? 'Next up' : 'First class'
   const upNextEmpty = isViewingToday && activeClasses.length > 0 ? 'No more classes' : 'No classes'
 
-  const upNextDetail = upcomingClass
+  const upNextDetail = selectedHoliday
+    ? `${selectedHoliday.name} Holiday`
+    : upcomingClass
     ? `${upcomingClass.courseCode} · ${upcomingClass.startTime} - ${upcomingClass.endTime}`
     : upNextEmpty
   // A secondary line under "next up": live status when viewing today.
@@ -354,6 +388,8 @@ export default function Page() {
     ? { dot: 'bg-slate-400', label: 'Live schedule', pulse: false }
     : !isViewingToday
     ? { dot: 'bg-slate-400', label: `Viewing ${FULL_DAYS[selectedDay]}`, pulse: false }
+    : selectedHoliday
+    ? { dot: 'bg-slate-400', label: `${selectedHoliday.name} holiday`, pulse: false }
     : ongoingClass
     ? { dot: 'bg-[#30D158]', label: `In session · ${ongoingClass.courseCode}`, pulse: true }
     : upcomingClass
@@ -568,8 +604,10 @@ export default function Page() {
               <div>
                 <h2 className="text-[22px] font-bold tracking-tight">{FULL_DAYS[selectedDay]}</h2>
                 <p className="mt-0.5 text-[13px] text-slate-500 dark:text-slate-400">
-                  {dayClasses.length
-                    ? `${dayClasses.length} classes from your routine`
+                  {selectedHoliday
+                    ? 'National holiday — no classes scheduled.'
+                    : visibleDayClasses.length
+                    ? `${visibleDayClasses.length} classes from your routine`
                     : sectionHasData
                     ? 'A clear day — no classes scheduled.'
                     : `No routine added for ${selectedSection} yet.`}
@@ -588,15 +626,23 @@ export default function Page() {
               </p>
             )}
 
-            {!sectionHasData && (
+            {!selectedHoliday && !sectionHasData && (
               <div className="panel panel-dim mb-3 rounded-2xl px-4 py-3 text-[13px] text-slate-600 dark:text-slate-300">
                 No regular routine has been added for {selectedSection} yet.{personal ? ' Only your personal sessions are shown.' : ''}
               </div>
             )}
 
             <div className="flex flex-col gap-2.5">
-              {dayClasses.map((item, index) => {
-                const previous = dayClasses[index - 1]
+              {selectedHoliday ? (
+                <article className="panel flex items-center gap-3 rounded-2xl p-4">
+                  <CalendarDays className="size-6 shrink-0 text-[#007AFF] dark:text-[#0A84FF]" />
+                  <div className="min-w-0">
+                    <h3 className="text-[16px] font-semibold">{selectedHoliday.name} Holiday</h3>
+                    <p className="mt-1 text-[13px] text-slate-500 dark:text-slate-400">No classes scheduled today.</p>
+                  </div>
+                </article>
+              ) : visibleDayClasses.map((item, index) => {
+                const previous = visibleDayClasses[index - 1]
                 const gap = previous ? item.startMinutes - previous.endMinutes : 0
                 const gapHours = Math.floor(gap / 60)
                 const gapMins = gap % 60
@@ -762,8 +808,10 @@ export default function Page() {
           notificationLead={notificationLead}
           onEnableNotifications={enableNotifications}
           onDisableNotifications={disableNotifications}
+          onTestNotification={testNotification}
           onLeadChange={changeNotificationLead}
           notificationError={notificationError}
+          notificationStatus={notificationStatus}
           onExportCalendar={(weeks) => downloadRoutineCalendar(selectedSectionClasses, selectedSection, weeks)}
         />
 
