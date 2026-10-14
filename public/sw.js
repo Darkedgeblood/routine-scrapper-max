@@ -1,4 +1,4 @@
-const CACHE_NAME = 'routine-max-cache-v2';
+const CACHE_NAME = 'routine-max-cache-v3';
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
@@ -42,3 +42,15 @@ self.addEventListener('fetch', (event) => {
       })
   );
 });
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windows) => {
+      const appWindow = windows.find((client) => 'focus' in client);
+      if (appWindow) return appWindow.focus();
+      return self.clients.openWindow('/');
+    })
+  );
+});
+
