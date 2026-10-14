@@ -626,7 +626,7 @@ export default function Page() {
               </p>
             )}
 
-            {!sectionHasData && (
+            {!selectedHoliday && !sectionHasData && (
               <div className="panel panel-dim mb-3 rounded-2xl px-4 py-3 text-[13px] text-slate-600 dark:text-slate-300">
                 No regular routine has been added for {selectedSection} yet.{personal ? ' Only your personal sessions are shown.' : ''}
               </div>
