@@ -389,8 +389,8 @@ export default function Page() {
         <div className="relative z-10 mx-auto min-h-screen max-w-3xl px-4 pb-32 pt-6 sm:px-6">
 
           {/* iOS Large Title header */}
-          <header className="flex items-start justify-between gap-3">
-            <div className="flex min-w-0 items-center gap-3">
+          <header className="flex items-center justify-between gap-2">
+            <div className="flex min-w-0 flex-1 items-center gap-2.5">
               <button
                 type="button"
                 onClick={handleLogoTap}
@@ -406,8 +406,8 @@ export default function Page() {
                   className="size-12 object-contain"
                 />
               </button>
-              <div className="min-w-0">
-                <h1 className="text-[32px] font-bold leading-tight tracking-tight">
+              <div className="min-w-0 flex-1">
+                <h1 className="truncate whitespace-nowrap text-[28px] font-bold leading-none tracking-tight sm:text-[32px]">
                   Routine
                 </h1>
                 <p className="truncate text-sm text-slate-500 dark:text-slate-400">
@@ -415,7 +415,7 @@ export default function Page() {
                 </p>
               </div>
             </div>
-            <div className="flex shrink-0 items-center gap-1.5">
+            <div className="flex shrink-0 items-center gap-1 sm:gap-1.5">
               <button
                 type="button"
                 onClick={() =>
@@ -428,7 +428,7 @@ export default function Page() {
                     ? `Reminders, ${pending.length} pending`
                     : 'Add a quiz, assignment or presentation'
                 }
-                className={`panel relative flex size-11 items-center justify-center rounded-full text-slate-600 transition dark:text-slate-300 ${FOCUS_RING}`}
+                className={`panel relative flex size-10 items-center justify-center rounded-full text-slate-600 transition dark:text-slate-300 sm:size-11 ${FOCUS_RING}`}
               >
                 <Plus className="size-5" />
                 {isMounted && pending.length > 0 && (
@@ -444,7 +444,7 @@ export default function Page() {
                 type="button"
                 onClick={() => setFeaturesOpen(true)}
                 aria-label="Routine settings and tools"
-                className={`panel flex size-11 items-center justify-center rounded-full text-slate-600 transition dark:text-slate-300 ${FOCUS_RING}`}
+                className={`panel flex size-10 items-center justify-center rounded-full text-slate-600 transition dark:text-slate-300 sm:size-11 ${FOCUS_RING}`}
               >
                 <Settings2 className="size-5" />
               </button>
@@ -452,12 +452,12 @@ export default function Page() {
                 type="button"
                 onClick={() => openAccount()}
                 aria-label={auth.user ? 'Your profile' : 'Sign in'}
-                className={`panel flex size-11 items-center justify-center overflow-hidden rounded-full text-slate-600 transition dark:text-slate-300 ${FOCUS_RING}`}
+                className={`panel flex size-10 items-center justify-center overflow-hidden rounded-full text-slate-600 transition dark:text-slate-300 sm:size-11 ${FOCUS_RING}`}
               >
                 {auth.loading ? (
                   <span aria-hidden="true" className="size-5 animate-pulse rounded-full bg-slate-300/60 dark:bg-white/15" />
                 ) : auth.user ? (
-                  <Avatar url={auth.profile?.avatar_url} name={auth.profile?.display_name} email={auth.email} className="size-11 text-[16px]" />
+                  <Avatar url={auth.profile?.avatar_url} name={auth.profile?.display_name} email={auth.email} className="size-10 text-[16px] sm:size-11" />
                 ) : (
                   <Avatar className="size-11 text-[16px]" />
                 )}
@@ -479,19 +479,19 @@ export default function Page() {
           )}
 
           {/* Compact live status card */}
-          <section className="panel mt-6 rounded-3xl p-5">
-            <div className="flex flex-wrap items-end justify-between gap-4">
-              <div>
-                <p role="timer" aria-live="off" className="text-[40px] font-bold leading-none tracking-tight tabular-nums sm:text-5xl">
+          <section className="panel mt-5 rounded-3xl p-4 sm:mt-6 sm:p-5">
+            <div>
+              <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                <p role="timer" aria-live="off" className="text-[38px] font-bold leading-none tracking-tight tabular-nums sm:text-5xl">
                   {isMounted && now ? now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '12:00 AM'}
                 </p>
-                <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">
+                <p className="text-sm text-slate-500 dark:text-slate-400">
                   {isMounted && now ? now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }) : 'Loading date…'}
                 </p>
               </div>
-              <div className="text-right">
+              <div className="mt-5 min-w-0 border-t border-slate-200 pt-3 dark:border-white/10">
                 <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">{upNextLabel}</p>
-                <p className="mt-1 text-[15px] font-semibold">{upNextDetail}</p>
+                <p className="mt-1 break-words text-[17px] font-semibold leading-snug">{upNextDetail}</p>
                 {upNextSub && (
                   <p className={`mt-0.5 text-[13px] font-medium ${ongoingClass ? 'text-[#30D158]' : IOS_BLUE}`}>
                     {upNextSub}
@@ -502,32 +502,30 @@ export default function Page() {
           </section>
 
           {/* Today at a glance */}
-          <section className={`mt-3 grid gap-3 ${personal ? 'grid-cols-3' : 'grid-cols-2'}`}>
-            <div className={`panel flex items-center gap-3 rounded-3xl p-4 transition-opacity ${regularCount === 0 ? 'opacity-50' : ''}`}>
-              <BookOpen className="size-5 shrink-0 text-slate-400" />
-              <div className="min-w-0">
+          <section className={`mt-3 grid gap-2.5 ${personal ? 'grid-cols-3' : 'grid-cols-2'}`}>
+            <div className={`panel flex min-w-0 flex-col gap-2 rounded-2xl p-3 transition-opacity sm:rounded-3xl sm:p-4 ${regularCount === 0 ? 'opacity-50' : ''}`}>
+              <div className="flex items-center gap-2">
+                <BookOpen className="size-5 shrink-0 text-slate-400" />
                 <p className="text-xl font-bold leading-none tabular-nums">{regularCount}</p>
-                <p className="mt-1 truncate text-[11px] font-medium text-slate-500 dark:text-slate-400">classes today</p>
               </div>
+              <p className="text-[11px] font-medium leading-tight text-slate-500 dark:text-slate-400">classes today</p>
             </div>
-            <div className={`panel flex items-center gap-3 rounded-3xl p-4 transition-opacity ${totalDurationMinutes === 0 ? 'opacity-50' : ''}`}>
-              <Clock className="size-5 shrink-0 text-slate-400" />
-              <div className="min-w-0">
-                <p className="text-xl font-bold leading-none tabular-nums">
+            <div className={`panel flex min-w-0 flex-col gap-2 rounded-2xl p-3 transition-opacity sm:rounded-3xl sm:p-4 ${totalDurationMinutes === 0 ? 'opacity-50' : ''}`}>
+              <div className="flex items-center gap-2">
+                <Clock className="size-5 shrink-0 text-slate-400" />
+                <p className="whitespace-nowrap text-[17px] font-bold leading-none tabular-nums sm:text-xl">
                   {Math.floor(totalDurationMinutes / 60)}h{totalDurationMinutes % 60 > 0 ? ` ${totalDurationMinutes % 60}m` : ''}
                 </p>
-                <p className="mt-1 truncate text-[11px] font-medium text-slate-500 dark:text-slate-400">class time</p>
               </div>
+              <p className="text-[11px] font-medium leading-tight text-slate-500 dark:text-slate-400">class time</p>
             </div>
             {personal && (
-              <div className="panel flex items-center gap-3 rounded-3xl p-4">
-                <RotateCcw className="size-5 shrink-0 text-amber-500" />
-                <div className="min-w-0">
+              <div className="panel flex min-w-0 flex-col gap-2 rounded-2xl p-3 sm:rounded-3xl sm:p-4">
+                <div className="flex items-center gap-2">
+                  <RotateCcw className="size-5 shrink-0 text-amber-500" />
                   <p className="text-xl font-bold leading-none tabular-nums">{retakeCount}</p>
-                  <p className="mt-1 truncate text-[11px] font-medium text-slate-500 dark:text-slate-400">
-                    retake{retakeCourses.length > 0 ? ` · ${retakeCourses.join(', ')}` : ''}
-                  </p>
                 </div>
+                <p className="text-[11px] font-medium leading-tight text-slate-500 dark:text-slate-400">retakes{retakeCourses.length > 0 ? ` · ${retakeCourses.join(', ')}` : ''}</p>
               </div>
             )}
           </section>
@@ -636,10 +634,10 @@ export default function Page() {
                           : 'hover:border-slate-300 dark:hover:border-slate-600'
                       }`}
                     >
-                      <div className="flex w-[62px] shrink-0 flex-col justify-center border-r border-slate-200 pr-3 dark:border-white/10 sm:w-[84px] sm:pr-5">
-                        <span className="text-[15px] font-semibold tabular-nums">{item.startTime}</span>
+                      <div className="flex w-[84px] shrink-0 flex-col justify-center border-r border-slate-200 pr-3 dark:border-white/10 sm:w-[96px] sm:pr-4">
+                        <span className="whitespace-nowrap text-[12px] font-semibold tabular-nums sm:text-[14px]">{item.startTime}</span>
                         <span className="my-1 h-px w-3 bg-slate-300 dark:bg-slate-600" />
-                        <span className="text-[12px] tabular-nums text-slate-400 dark:text-slate-500">{item.endTime}</span>
+                        <span className="whitespace-nowrap text-[11px] tabular-nums text-slate-400 dark:text-slate-500 sm:text-[12px]">{item.endTime}</span>
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
@@ -694,7 +692,7 @@ export default function Page() {
             <span className="inline-flex items-center gap-1.5">
               <span className={`size-1.5 rounded-full ${liveStatus.dot} ${liveStatus.pulse ? 'animate-pulse' : ''}`} /> {liveStatus.label}
             </span>
-            <span>Routine V4.0 · Effective 26 September 2026</span>
+            <span>Routine V4.1 · Effective 3 October 2026</span>
           </footer>
         </div>
 
