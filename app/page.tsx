@@ -1,13 +1,12 @@
 'use client'
 
 import { Fragment, startTransition, useEffect, useMemo, useRef, useState } from 'react'
-import { BookOpen, Clock, Coffee, MapPin, Plus, RotateCcw, Users } from 'lucide-react'
+import { BookOpen, CircleAlert, Clock, Coffee, MapPin, Plus, RotateCcw, Settings2, Users, X } from 'lucide-react'
 
 import {
   DAYS,
   FULL_DAYS,
   MY_SKIPPED_COURSES,
-  MY_SKIPPED_LABS,
   PERSONAL_DATA,
   ROUTINE_DATA,
   SECTIONS,
@@ -18,6 +17,10 @@ import { useAuth } from '@/lib/auth'
 import { toDateKey, useReminders } from '@/lib/reminders'
 import { AccountSheet, Avatar } from '@/components/account-sheet'
 import { ReminderRow, ReminderSheet, TYPE_META, type CourseOption } from '@/components/reminder-sheet'
+import { FeatureCenterSheet } from '@/components/feature-center-sheet'
+import { downloadRoutineCalendar } from '@/lib/calendar-export'
+import { clearScheduledNotifications, requestNotificationPermission, syncScheduledNotifications } from '@/lib/notification-scheduler'
+import { checkForScheduleChanges, dismissScheduleNotice, type ScheduleNotice } from '@/lib/schedule-changes'
 
 // Shared focus ring for every interactive element.
 const FOCUS_RING = 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007AFF]/60 dark:focus-visible:ring-[#0A84FF]/60'
@@ -48,11 +51,12 @@ function isSkippedCourse(item: RoutineItem, personal: boolean) {
 }
 
 // Classes shown greyed out (personal mode only); they don't count towards "next up" or totals.
+function matchesLabGroup(item: RoutineItem, group: string) {
+  return !item.subSection || group === 'all' || item.subSection.slice(-1) === group
+}
+
 function isInactive(item: RoutineItem, personal: boolean) {
-  return (
-    isSkippedCourse(item, personal) ||
-    (personal && !!item.subSection && MY_SKIPPED_LABS.includes(item.subSection))
-  )
+  return isSkippedCourse(item, personal)
 }
 
 function teacherLabel(initials: string) {
@@ -74,6 +78,12 @@ export default function Page() {
   const auth = useAuth()
   const { reminders, pending, error: reminderError, add: addReminder, toggle: toggleReminder, remove: removeReminder } = useReminders(auth.userId)
   const [accountOpen, setAccountOpen] = useState(false)
+  const [featuresOpen, setFeaturesOpen] = useState(false)
+  const [labGroup, setLabGroup] = useState('all')
+  const [scheduleNotice, setScheduleNotice] = useState<ScheduleNotice | null>(null)
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false)
+  const [notificationLead, setNotificationLead] = useState(10)
+  const [notificationError, setNotificationError] = useState<string | null>(null)
   const [accountReason, setAccountReason] = useState<string | undefined>(undefined)
 
   const openAccount = (reason?: string) => {
@@ -117,7 +127,13 @@ export default function Page() {
     setDark(startDark)
 
     const savedSection = window.localStorage.getItem('routine-section')
-    if (savedSection && SECTIONS.includes(savedSection)) setSelectedSection(savedSection)
+    const initialSection = savedSection && SECTIONS.includes(savedSection) ? savedSection : '69_P'
+    setSelectedSection(initialSection)
+    setLabGroup(window.localStorage.getItem(`routine-lab-group:${initialSection}`) ?? 'all')
+    setNotificationsEnabled(window.localStorage.getItem('routine-notifications-enabled') === '1')
+    const savedLead = Number(window.localStorage.getItem('routine-notification-lead'))
+    if ([5, 10, 15, 30].includes(savedLead)) setNotificationLead(savedLead)
+    setScheduleNotice(checkForScheduleChanges(ROUTINE_DATA))
     if (window.localStorage.getItem('routine-personal') === '1') setPersonal(true)
 
     setNow(new Date())
@@ -175,15 +191,76 @@ export default function Page() {
   const chooseSection = (section: string) => {
     if (!SECTIONS.includes(section)) return
     setSelectedSection(section)
+    setLabGroup(window.localStorage.getItem(`routine-lab-group:${section}`) ?? 'all')
     window.localStorage.setItem('routine-section', section)
   }
+
+  const chooseLabGroup = (group: string) => {
+    setLabGroup(group)
+    window.localStorage.setItem(`routine-lab-group:${selectedSection}`, group)
+  }
+
+  const labGroups = useMemo(() => [...new Set(
+    ROUTINE_DATA
+      .filter((item) => item.section === selectedSection && item.subSection)
+      .map((item) => item.subSection!.slice(-1))
+  )].sort(), [selectedSection])
+
+  const selectedSectionClasses = useMemo(
+    () => ROUTINE_DATA.filter((item) => item.section === selectedSection && matchesLabGroup(item, labGroup)),
+    [selectedSection, labGroup]
+  )
+
+  const enableNotifications = async () => {
+    setNotificationError(null)
+    try {
+      const granted = await requestNotificationPermission()
+      if (!granted) {
+        setNotificationError('Allow notifications in your device or browser settings, then try again.')
+        return
+      }
+      window.localStorage.setItem('routine-notifications-enabled', '1')
+      setNotificationsEnabled(true)
+    } catch {
+      setNotificationError('Notifications could not be enabled on this device.')
+    }
+  }
+
+  const disableNotifications = () => {
+    window.localStorage.setItem('routine-notifications-enabled', '0')
+    setNotificationsEnabled(false)
+    setNotificationError(null)
+  }
+
+  const changeNotificationLead = (minutes: number) => {
+    setNotificationLead(minutes)
+    window.localStorage.setItem('routine-notification-lead', String(minutes))
+  }
+
+  const dismissNotice = () => {
+    if (!scheduleNotice) return
+    dismissScheduleNotice(scheduleNotice.id)
+    setScheduleNotice(null)
+  }
+
+  useEffect(() => {
+    if (!isMounted) return
+    void syncScheduledNotifications({
+      enabled: notificationsEnabled,
+      classes: selectedSectionClasses,
+      reminders: reminders.filter((item) => !item.done),
+      leadMinutes: notificationLead,
+    })
+  }, [isMounted, notificationsEnabled, selectedSectionClasses, reminders, notificationLead])
+
+  useEffect(() => () => { void clearScheduledNotifications() }, [])
 
   const dayClasses = useMemo(
     () =>
       (personal ? [...ROUTINE_DATA, ...PERSONAL_DATA] : ROUTINE_DATA)
-        .filter((item) => item.day === FULL_DAYS[selectedDay] && (item.section === selectedSection || item.isRetake))
+        .filter((item) => item.day === FULL_DAYS[selectedDay] && (item.section === selectedSection || item.isRetake) && matchesLabGroup(item, labGroup))
         .sort((a, b) => a.startMinutes - b.startMinutes),
-    [selectedDay, selectedSection, personal]
+    [selectedDay, selectedSection, personal, labGroup]
   )
 
   // How many active classes each day of the week has (shown under each day tab).
@@ -195,23 +272,24 @@ export default function Page() {
         (item) =>
           item.day === FULL_DAYS[day] &&
           (item.section === selectedSection || item.isRetake) &&
+          matchesLabGroup(item, labGroup) &&
           !isInactive(item, personal)
       ).length
     }
     return counts
-  }, [selectedSection, personal])
+  }, [selectedSection, personal, labGroup])
 
   // Courses offered in the reminder form: this section's classes plus retakes (and personal sessions).
   const courseOptions = useMemo<CourseOption[]>(() => {
     const source = personal ? [...ROUTINE_DATA, ...PERSONAL_DATA] : ROUTINE_DATA
     const seen = new Map<string, string>()
     for (const item of source) {
-      if ((item.section === selectedSection || item.isRetake) && !seen.has(item.courseCode)) {
+      if ((item.section === selectedSection || item.isRetake) && matchesLabGroup(item, labGroup) && !seen.has(item.courseCode)) {
         seen.set(item.courseCode, item.courseTitle.replace(/ Lab$/, ''))
       }
     }
     return [...seen].map(([code, title]) => ({ code, title })).sort((a, b) => a.code.localeCompare(b.code))
-  }, [selectedSection, personal])
+  }, [selectedSection, personal, labGroup])
 
   // Pending reminders grouped by calendar date (for the day card and the red dots on the tab bar).
   const pendingByDate = useMemo(() => {
@@ -333,7 +411,7 @@ export default function Page() {
                   Routine
                 </h1>
                 <p className="truncate text-sm text-slate-500 dark:text-slate-400">
-                  {personal ? 'Personal schedule' : 'CSE · Batch 69'}
+                  {personal ? 'Personal schedule' : `CSE · Batch 69 · ${selectedSection}${labGroup !== 'all' ? ` · Group ${labGroup}` : ''}`}
                 </p>
               </div>
             </div>
@@ -364,6 +442,14 @@ export default function Page() {
               </button>
               <button
                 type="button"
+                onClick={() => setFeaturesOpen(true)}
+                aria-label="Routine settings and tools"
+                className={`panel flex size-11 items-center justify-center rounded-full text-slate-600 transition dark:text-slate-300 ${FOCUS_RING}`}
+              >
+                <Settings2 className="size-5" />
+              </button>
+              <button
+                type="button"
                 onClick={() => openAccount()}
                 aria-label={auth.user ? 'Your profile' : 'Sign in'}
                 className={`panel flex size-11 items-center justify-center overflow-hidden rounded-full text-slate-600 transition dark:text-slate-300 ${FOCUS_RING}`}
@@ -378,6 +464,19 @@ export default function Page() {
               </button>
             </div>
           </header>
+
+          {scheduleNotice && (
+            <section role="status" className="panel mt-3 flex items-start gap-2.5 rounded-2xl border border-[#007AFF]/20 p-3 dark:border-[#0A84FF]/20">
+              <CircleAlert className="mt-0.5 size-4 shrink-0 text-[#007AFF] dark:text-[#0A84FF]" />
+              <button type="button" onClick={() => setFeaturesOpen(true)} className={`min-w-0 flex-1 text-left ${FOCUS_RING}`}>
+                <span className="block text-[13px] font-semibold">{scheduleNotice.title}</span>
+                <span className="mt-0.5 block truncate text-[12px] text-slate-500 dark:text-slate-400">{scheduleNotice.lines[0]}</span>
+              </button>
+              <button type="button" onClick={dismissNotice} aria-label="Dismiss routine update" className={`flex size-7 shrink-0 items-center justify-center rounded-full text-slate-400 hover:bg-black/5 dark:hover:bg-white/10 ${FOCUS_RING}`}>
+                <X className="size-4" />
+              </button>
+            </section>
+          )}
 
           {/* Compact live status card */}
           <section className="panel mt-6 rounded-3xl p-5">
@@ -659,6 +758,25 @@ export default function Page() {
           onChooseSection={chooseSection}
         />
 
+        <FeatureCenterSheet
+          open={featuresOpen}
+          onClose={() => setFeaturesOpen(false)}
+          section={selectedSection}
+          labGroup={labGroup}
+          labGroups={labGroups}
+          onLabGroupChange={chooseLabGroup}
+          scheduleNotice={scheduleNotice}
+          onDismissScheduleNotice={dismissNotice}
+          classes={selectedSectionClasses}
+          notificationsEnabled={notificationsEnabled}
+          notificationLead={notificationLead}
+          onEnableNotifications={enableNotifications}
+          onDisableNotifications={disableNotifications}
+          onLeadChange={changeNotificationLead}
+          notificationError={notificationError}
+          onExportCalendar={(weeks) => downloadRoutineCalendar(selectedSectionClasses, selectedSection, weeks)}
+        />
+
         <ReminderSheet
           error={reminderError}
           open={sheetOpen}
@@ -674,3 +792,4 @@ export default function Page() {
     </>
   )
 }
+

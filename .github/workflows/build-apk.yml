@@ -114,3 +114,4 @@ jobs:
           files: Routine-Scrapper-Max.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
