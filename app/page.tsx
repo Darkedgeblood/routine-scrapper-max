@@ -499,8 +499,6 @@ export default function Page() {
           </section>
 
           {/* Today at a glance */}
-          <section className={`mt-3 grid gap-2.5 ${personal ? 'grid-cols-3' : 'grid-cols-2'}`}>
-            <div className={`panel flex min-w-0 flex-col gap-2 rounded-2xl p{/* Today at a glance */}
           <section className="mt-3 grid grid-cols-2 gap-3">
             <div className={`panel flex min-w-0 items-center gap-3 rounded-3xl p-4 transition-opacity ${regularCount === 0 ? 'opacity-50' : ''}`}>
               <BookOpen className="size-5 shrink-0 text-slate-400" />
@@ -520,7 +518,10 @@ export default function Page() {
             </div>
           </section>
 
-               <p className="text-[15px] font-semibold">Quiz · Assignment · Presentation</p>
+          {/* Quizzes, assignments & presentations for the selected day */}
+          <section className="panel mt-3 rounded-3xl p-4">
+            <div className="flex items-center justify-between">
+              <p className="text-[15px] font-semibold">Quiz · Assignment · Presentation</p>
               <p className="text-[13px] text-slate-500 dark:text-slate-400">{isViewingToday ? 'Today' : selectedDateLabel}</p>
             </div>
             {!auth.user ? (
