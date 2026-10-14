@@ -186,13 +186,14 @@ export function FeatureCenterSheet({
                 <p className="mt-1 text-[12px] text-slate-500 dark:text-slate-400">Download a recurring calendar file for {section}.</p>
               </div>
             </div>
-            <div className="mt-3 flex items-center gap-2">
+            <div className="mt-3 grid grid-cols-[auto_minmax(0,1fr)] items-center gap-2">
               <label htmlFor="calendar-weeks" className="shrink-0 text-[12px] text-slate-500 dark:text-slate-400">Repeat for</label>
-              <select id="calendar-weeks" value={weeks} onChange={(event) => setWeeks(Number(event.target.value))} className={`${FIELD} max-w-36`}>
+              <select id="calendar-weeks" value={weeks} onChange={(event) => setWeeks(Number(event.target.value))} className={`${FIELD} w-full min-w-0`}>
                 {[4, 8, 12, 16, 20, 24].map((count) => <option key={count} value={count}>{count} weeks</option>)}
               </select>
-              <button type="button" onClick={() => onExportCalendar(weeks)} disabled={classes.length === 0} className={`ios-active flex flex-1 items-center justify-center gap-1.5 rounded-full py-2.5 text-[12px] font-semibold disabled:opacity-40 ${FOCUS}`}>
-                <CalendarDays className="size-4" /> Export .ics
+              <button type="button" onClick={() => onExportCalendar(weeks)} disabled={classes.length === 0} className={`ios-active col-span-2 flex w-full items-center justify-center gap-2 whitespace-nowrap rounded-full py-2.5 text-[13px] font-semibold disabled:opacity-40 ${FOCUS}`}>
+                <CalendarDays aria-hidden="true" className="size-4 shrink-0" />
+                <span>Export .ics</span>
               </button>
             </div>
             <p className="mt-2 text-[11px] text-slate-400 dark:text-slate-500">Events repeat weekly; holidays and one-off room changes aren’t included in the calendar file.</p>
