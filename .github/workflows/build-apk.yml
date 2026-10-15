@@ -78,6 +78,34 @@ jobs:
           export default config;
           EOF
           npx cap add android
+          python3 - <<'PY'
+          from pathlib import Path
+
+          activities = list(Path('android/app/src/main/java').rglob('MainActivity.java'))
+          if len(activities) != 1:
+              raise SystemExit(f'Expected one generated MainActivity.java, found {len(activities)}')
+
+          activity = activities[0]
+          content = activity.read_text()
+          if 'setVerticalScrollBarEnabled(false)' not in content:
+              closing_brace = content.rfind('}')
+              if closing_brace < 0:
+                  raise SystemExit('Could not find the MainActivity class body')
+              native_scrollbar_settings = '''
+              @Override
+              protected void onCreate(android.os.Bundle savedInstanceState) {
+                  super.onCreate(savedInstanceState);
+                  com.getcapacitor.Bridge bridge = getBridge();
+                  android.webkit.WebView webView = bridge == null ? null : bridge.getWebView();
+                  if (webView != null) {
+                      webView.setVerticalScrollBarEnabled(false);
+                      webView.setHorizontalScrollBarEnabled(false);
+                  }
+              }
+          '''
+              content = content[:closing_brace] + native_scrollbar_settings + content[closing_brace:]
+              activity.write_text(content)
+          PY
           npx cap sync
           npx @capacitor/assets generate --android --assetPath assets --androidProject android --iconBackgroundColor '#e9f2fb'
           python3 - <<'PY'
