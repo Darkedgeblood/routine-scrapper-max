@@ -305,15 +305,18 @@
 }
 @media (max-width: 639px) {
   html,
-  body {
-    scrollbar-width: none;
-    -ms-overflow-style: none;
+  body,
+  body * {
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
   }
   html::-webkit-scrollbar,
-  body::-webkit-scrollbar {
-    display: none;
-    width: 0;
-    height: 0;
+  body::-webkit-scrollbar,
+  body *::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+    background: transparent !important;
   }
 }
 
