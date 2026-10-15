@@ -72,7 +72,8 @@ export async function sendTestNotification() {
         id: 2_000_001,
         title,
         body,
-        schedule: { at: new Date(Date.now() + 5_000), allowWhileIdle: true, isExactNotification: false },
+        schedule: { at: new Date(Date.now() + 5_000), allowWhileIdle: true },
+        isExactNotification: false,
         channelId: CHANNEL_ID,
       }],
     })

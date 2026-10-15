@@ -1,14 +1,11 @@
 'use client'
 
-import { Fragment, startTransition, useEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, startTransition, useEffect, useMemo, useState } from 'react'
 import { BookOpen, CalendarDays, CircleAlert, Clock, Coffee, MapPin, Plus, Settings2, Users, X } from 'lucide-react'
 
 import {
   DAYS,
   FULL_DAYS,
-  MY_SKIPPED_COURSES,
-  MY_SKIPPED_LABS,
-  PERSONAL_DATA,
   ROUTINE_DATA,
   SECTIONS,
   TEACHERS,
@@ -23,6 +20,18 @@ import { downloadRoutineCalendar } from '@/lib/calendar-export'
 import { clearScheduledNotifications, requestNotificationPermission, sendTestNotification, syncScheduledNotifications } from '@/lib/notification-scheduler'
 import { BANGLADESH_NATIONAL_HOLIDAYS, getBangladeshNationalHoliday } from '@/lib/bangladesh-holidays'
 import { checkForScheduleChanges, dismissScheduleNotice, type ScheduleNotice } from '@/lib/schedule-changes'
+import { supabase } from '@/lib/supabase'
+
+const PERSONAL_OWNER_EMAIL = '252-15-596@diu.edu.bd'
+
+type PersonalRoutine = {
+  routine: RoutineItem[]
+  skipped_courses: string[]
+  skipped_labs: string[]
+}
+
+const EMPTY_ROUTINE: RoutineItem[] = []
+const EMPTY_LIST: string[] = []
 
 // Shared focus ring for every interactive element.
 const FOCUS_RING = 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007AFF]/60 dark:focus-visible:ring-[#0A84FF]/60'
@@ -48,8 +57,8 @@ function getWeekDates(today: Date) {
   })
 }
 
-function isSkippedCourse(item: RoutineItem, personal: boolean) {
-  return personal && MY_SKIPPED_COURSES.includes(item.courseCode)
+function isSkippedCourse(item: RoutineItem, skippedCourses: string[]) {
+  return skippedCourses.includes(item.courseCode)
 }
 
 // Classes outside the selected lab group stay visible but are dimmed and excluded from totals.
@@ -57,10 +66,10 @@ function isOtherLabGroup(item: RoutineItem, group: string) {
   return !!item.subSection && group !== 'all' && item.subSection.slice(-1) !== group
 }
 
-function isInactive(item: RoutineItem, personal: boolean, group: string) {
+function isInactive(item: RoutineItem, skippedCourses: string[], skippedLabs: string[], group: string) {
   return (
-    isSkippedCourse(item, personal) ||
-    (personal && !!item.subSection && MY_SKIPPED_LABS.includes(item.subSection)) ||
+    isSkippedCourse(item, skippedCourses) ||
+    (!!item.subSection && skippedLabs.includes(item.subSection)) ||
     isOtherLabGroup(item, group)
   )
 }
@@ -111,9 +120,11 @@ export default function Page() {
   const [dark, setDark] = useState(true)
   const [isMounted, setIsMounted] = useState(false)
   const [selectedSection, setSelectedSection] = useState('69_P')
-  const [personal, setPersonal] = useState(false)
-  const tapCount = useRef(0)
-  const tapTimer = useRef<number | undefined>(undefined)
+  const [personalRoutine, setPersonalRoutine] = useState<PersonalRoutine | null>(null)
+  const personal = personalRoutine !== null && auth.email?.trim().toLowerCase() === PERSONAL_OWNER_EMAIL
+  const personalClasses = personal ? personalRoutine?.routine ?? EMPTY_ROUTINE : EMPTY_ROUTINE
+  const skippedCourses = personal ? personalRoutine?.skipped_courses ?? EMPTY_LIST : EMPTY_LIST
+  const skippedLabs = personal ? personalRoutine?.skipped_labs ?? EMPTY_LIST : EMPTY_LIST
 
   // Splash Screen State
   const [showSplash, setShowSplash] = useState(true)
@@ -141,8 +152,6 @@ export default function Page() {
     const savedLead = Number(window.localStorage.getItem('routine-notification-lead'))
     if ([5, 10, 15, 30].includes(savedLead)) setNotificationLead(savedLead)
     setScheduleNotice(checkForScheduleChanges(ROUTINE_DATA))
-    if (window.localStorage.getItem('routine-personal') === '1') setPersonal(true)
-
     setNow(new Date())
     setIsMounted(true)
 
@@ -165,20 +174,39 @@ export default function Page() {
     }
   }, [])
 
-  // Tap the logo 5 times quickly to switch personal mode on or off.
-  const handleLogoTap = () => {
-    tapCount.current += 1
-    window.clearTimeout(tapTimer.current)
-    tapTimer.current = window.setTimeout(() => {
-      tapCount.current = 0
-    }, 1500)
-    if (tapCount.current >= 5) {
-      tapCount.current = 0
-      const next = !personal
-      setPersonal(next)
-      window.localStorage.setItem('routine-personal', next ? '1' : '0')
+  // The owner-only data is fetched from Supabase; RLS is the access boundary.
+  // Clearing before each lookup also prevents a previous account's data lingering after sign-out.
+  useEffect(() => {
+    let active = true
+    setPersonalRoutine(null)
+    if (!supabase || auth.email?.trim().toLowerCase() !== PERSONAL_OWNER_EMAIL) {
+      return () => { active = false }
     }
-  }
+
+    void (async () => {
+      try {
+        const { data, error } = await supabase
+          .from('personal_routines')
+          .select('routine, skipped_courses, skipped_labs')
+          .maybeSingle()
+        if (!active) return
+        if (error) {
+          console.error('Could not load personal routine', error)
+          return
+        }
+        if (
+          data && Array.isArray(data.routine) &&
+          Array.isArray(data.skipped_courses) && Array.isArray(data.skipped_labs)
+        ) {
+          setPersonalRoutine(data as PersonalRoutine)
+        }
+      } catch (error) {
+        if (active) console.error('Could not load personal routine', error)
+      }
+    })()
+
+    return () => { active = false }
+  }, [auth.email])
 
   const toggleDark = () => {
     const next = !dark
@@ -291,16 +319,16 @@ export default function Page() {
 
   const dayClasses = useMemo(
     () =>
-      (personal ? [...ROUTINE_DATA, ...PERSONAL_DATA] : ROUTINE_DATA)
+      [...ROUTINE_DATA, ...personalClasses]
         .filter((item) => item.day === FULL_DAYS[selectedDay] && (item.section === selectedSection || item.isRetake))
         .sort((a, b) => a.startMinutes - b.startMinutes),
-    [selectedDay, selectedSection, personal]
+    [selectedDay, selectedSection, personalClasses]
   )
   const visibleDayClasses = selectedHoliday ? [] : dayClasses
 
   // How many active classes each day of the week has (shown under each day tab).
   const weekCounts = useMemo(() => {
-    const source = personal ? [...ROUTINE_DATA, ...PERSONAL_DATA] : ROUTINE_DATA
+    const source = [...ROUTINE_DATA, ...personalClasses]
     const counts = {} as Record<(typeof DAYS)[number], number>
     for (const day of DAYS) {
       const date = weekDates?.[DAYS.indexOf(day)]
@@ -312,15 +340,15 @@ export default function Page() {
         (item) =>
           item.day === FULL_DAYS[day] &&
           (item.section === selectedSection || item.isRetake) &&
-          !isInactive(item, personal, labGroup)
+          !isInactive(item, skippedCourses, skippedLabs, labGroup)
       ).length
     }
     return counts
-  }, [selectedSection, personal, labGroup, weekDates])
+  }, [selectedSection, personalClasses, skippedCourses, skippedLabs, labGroup, weekDates])
 
   // Courses offered in the reminder form: this section's classes plus retakes (and personal sessions).
   const courseOptions = useMemo<CourseOption[]>(() => {
-    const source = personal ? [...ROUTINE_DATA, ...PERSONAL_DATA] : ROUTINE_DATA
+    const source = [...ROUTINE_DATA, ...personalClasses]
     const seen = new Map<string, string>()
     for (const item of source) {
       if ((item.section === selectedSection || item.isRetake) && !seen.has(item.courseCode)) {
@@ -328,7 +356,7 @@ export default function Page() {
       }
     }
     return [...seen].map(([code, title]) => ({ code, title })).sort((a, b) => a.code.localeCompare(b.code))
-  }, [selectedSection, personal, labGroup])
+  }, [selectedSection, personalClasses, labGroup])
 
   // Pending reminders grouped by calendar date (for the day card and the red dots on the tab bar).
   const pendingByDate = useMemo(() => {
@@ -343,10 +371,10 @@ export default function Page() {
   )
 
   const totalDurationMinutes = visibleDayClasses
-    .filter((item) => !isInactive(item, personal, labGroup))
+    .filter((item) => !isInactive(item, skippedCourses, skippedLabs, labGroup))
     .reduce((total, item) => total + item.endMinutes - item.startMinutes, 0)
   const totalDurationLabel = `Total: ${Math.floor(totalDurationMinutes / 60)}h ${totalDurationMinutes % 60}m`
-  const regularCount = visibleDayClasses.filter((item) => !item.isRetake && !isInactive(item, personal, labGroup)).length
+  const regularCount = visibleDayClasses.filter((item) => !item.isRetake && !isInactive(item, skippedCourses, skippedLabs, labGroup)).length
   const currentMinutes = now ? now.getHours() * 60 + now.getMinutes() : -1
   const selectedDateLabel = selectedDate
     ? selectedDate.toLocaleDateString('en-US', { day: 'numeric', month: 'short' })
@@ -358,7 +386,7 @@ export default function Page() {
   const isViewingToday = isMounted && now !== null && selectedDay === getToday(now)
   // Friday has no tab; the tabs then show the coming week.
   const isNextWeek = isMounted && now !== null && getToday(now) === null
-  const activeClasses = visibleDayClasses.filter((item) => !isInactive(item, personal, labGroup))
+  const activeClasses = visibleDayClasses.filter((item) => !isInactive(item, skippedCourses, skippedLabs, labGroup))
   const ongoingClass = isViewingToday
     ? activeClasses.find((item) => item.startMinutes <= currentMinutes && currentMinutes < item.endMinutes)
     : undefined
@@ -428,30 +456,13 @@ export default function Page() {
 
           {/* iOS Large Title header */}
           <header className="flex items-center justify-between gap-2">
-            <div className="flex min-w-0 flex-1 items-center gap-2.5">
-              <button
-                type="button"
-                onClick={handleLogoTap}
-                aria-label="Toggle personal mode"
-                className={`flex size-12 shrink-0 items-center justify-center ${FOCUS_RING}`}
-              >
-                <img
-                  src="/app-icon.png"
-                  alt=""
-                  aria-hidden="true"
-                  width={48}
-                  height={48}
-                  className="size-12 object-contain"
-                />
-              </button>
-              <div className="min-w-0 flex-1">
-                <h1 className="truncate whitespace-nowrap text-[28px] font-bold leading-none tracking-tight sm:text-[32px]">
-                  Routine
-                </h1>
-                <p className="truncate text-sm text-slate-500 dark:text-slate-400">
-                  {personal ? 'Personal schedule' : `CSE · Batch 69 · ${selectedSection}${labGroup !== 'all' ? ` · Group ${labGroup}` : ''}`}
-                </p>
-              </div>
+            <div className="min-w-0 flex-1">
+              <h1 className="truncate whitespace-nowrap text-[26px] font-bold leading-none tracking-tight sm:text-[32px]">
+                Routine
+              </h1>
+              <p className="truncate text-xs text-slate-500 dark:text-slate-400 sm:text-sm">
+                {personal ? 'Personal schedule' : `CSE · Batch 69 · ${selectedSection}${labGroup !== 'all' ? ` · Group ${labGroup}` : ''}`}
+              </p>
             </div>
             <div className="flex shrink-0 items-center gap-1 sm:gap-1.5">
               <button
@@ -647,9 +658,9 @@ export default function Page() {
                 const gap = previous ? item.startMinutes - previous.endMinutes : 0
                 const gapHours = Math.floor(gap / 60)
                 const gapMins = gap % 60
-                const inactive = isInactive(item, personal, labGroup)
+                const inactive = isInactive(item, skippedCourses, skippedLabs, labGroup)
                 const ongoing = ongoingClass?.id === item.id
-                const inactiveLabel = isSkippedCourse(item, personal) ? 'Not registered' : isOtherLabGroup(item, labGroup) ? 'Other group' : inactive ? `${item.subSection} Lab (skipped)` : ''
+                const inactiveLabel = isSkippedCourse(item, skippedCourses) ? 'Not registered' : isOtherLabGroup(item, labGroup) ? 'Other group' : inactive ? `${item.subSection} Lab (skipped)` : ''
 
                 return (
                   <Fragment key={item.id}>

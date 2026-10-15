@@ -200,14 +200,3 @@ export const ROUTINE_DATA: RoutineItem[] = [
   { id: 'thursday-69_g-cse216-69_g2-870', day: 'Thursday', startTime: '02:30 PM', endTime: '05:30 PM', startMinutes: 870, endMinutes: 1050, courseCode: 'CSE216', courseTitle: 'Electronic Devices and Circuits Lab', section: '69_G', teacher: 'MRH', room: 'KT-809 (E.C. & D.E. Lab)', isRetake: false, subSection: '69_G2' },
   { id: 'thursday-69_i-cse216-69_i1-870', day: 'Thursday', startTime: '02:30 PM', endTime: '05:30 PM', startMinutes: 870, endMinutes: 1050, courseCode: 'CSE216', courseTitle: 'Electronic Devices and Circuits Lab', section: '69_I', teacher: 'NUM', room: 'SH-105 (E.C. & B.E. Lab)', isRetake: false, subSection: '69_I1' },
 ]
-
-// Extra sessions that only show in personal mode (tap the logo 5 times to switch it on or off).
-export const PERSONAL_DATA: RoutineItem[] = [
-  { id: 'sat-retake-mat211', day: 'Saturday', startTime: '10:00 AM', endTime: '11:30 AM', startMinutes: 600, endMinutes: 690, courseCode: 'MAT211', courseTitle: 'Engineering Mathematics', section: 'RE_B(3C)', teacher: 'NRM', room: 'ANX1-307', isRetake: true, subSection: null },
-  { id: 'sun-retake-mat211', day: 'Sunday', startTime: '08:30 AM', endTime: '10:00 AM', startMinutes: 510, endMinutes: 600, courseCode: 'MAT211', courseTitle: 'Engineering Mathematics', section: 'RE_B(3C)', teacher: 'NRM', room: 'ANX1-208', isRetake: true, subSection: null },
-]
-
-// Personal settings, applied only in personal mode.
-export const MY_SKIPPED_COURSES = ['AOL101'] // courses I didn't take
-export const MY_SKIPPED_LABS = ['69_P2'] // personal lab sections I don't attend
-
