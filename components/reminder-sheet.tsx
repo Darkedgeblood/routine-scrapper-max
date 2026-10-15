@@ -172,7 +172,7 @@ export function ReminderSheet({
           </button>
         </div>
 
-        <div className="overflow-y-auto px-5 pb-6">
+        <div className="sheet-scrollbar-hidden min-h-0 overflow-y-auto overscroll-contain px-5 pb-6">
           {error && (
             <p role="alert" className="mb-3 rounded-xl bg-[#FF3B30]/10 px-3 py-2 text-[13px] font-medium text-[#D70015] dark:text-[#FF453A]">
               {error}

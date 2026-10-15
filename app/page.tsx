@@ -123,7 +123,9 @@ export default function Page() {
   const [isMounted, setIsMounted] = useState(false)
   const [selectedSection, setSelectedSection] = useState('69_P')
   const [personalRoutine, setPersonalRoutine] = useState<PersonalRoutine | null>(null)
-  const personal = personalRoutine !== null && auth.email?.trim().toLowerCase() === PERSONAL_OWNER_EMAIL
+  const [personalRoutineStatus, setPersonalRoutineStatus] = useState<'idle' | 'loading' | 'ready' | 'missing' | 'error'>('idle')
+  const [personalRoutineRetry, setPersonalRoutineRetry] = useState(0)
+  const personal = auth.email?.trim().toLowerCase() === PERSONAL_OWNER_EMAIL
   const personalClasses = personal ? personalRoutine?.routine ?? EMPTY_ROUTINE : EMPTY_ROUTINE
   const skippedCourses = personal ? personalRoutine?.skipped_courses ?? EMPTY_LIST : EMPTY_LIST
   const skippedLabs = personal ? personalRoutine?.skipped_labs ?? EMPTY_LIST : EMPTY_LIST
@@ -182,18 +184,26 @@ export default function Page() {
     let active = true
     setPersonalRoutine(null)
     if (!supabase || auth.email?.trim().toLowerCase() !== PERSONAL_OWNER_EMAIL) {
+      setPersonalRoutineStatus('idle')
       return () => { active = false }
     }
 
+    setPersonalRoutineStatus('loading')
     void (async () => {
       try {
         const { data, error } = await supabase
           .from('personal_routines')
           .select('routine, skipped_courses, skipped_labs')
+          .eq('owner_email', PERSONAL_OWNER_EMAIL)
           .maybeSingle()
         if (!active) return
         if (error) {
           console.error('Could not load personal routine', error)
+          setPersonalRoutineStatus('error')
+          return
+        }
+        if (!data) {
+          setPersonalRoutineStatus('missing')
           return
         }
         if (
@@ -201,14 +211,20 @@ export default function Page() {
           Array.isArray(data.skipped_courses) && Array.isArray(data.skipped_labs)
         ) {
           setPersonalRoutine(data as PersonalRoutine)
+          setPersonalRoutineStatus('ready')
+        } else {
+          setPersonalRoutineStatus('error')
         }
       } catch (error) {
-        if (active) console.error('Could not load personal routine', error)
+        if (active) {
+          console.error('Could not load personal routine', error)
+          setPersonalRoutineStatus('error')
+        }
       }
     })()
 
     return () => { active = false }
-  }, [auth.email])
+  }, [auth.email, personalRoutineRetry])
 
   const toggleDark = () => {
     const next = !dark
@@ -465,7 +481,7 @@ export default function Page() {
                 Routine
               </h1>
               <p className="truncate text-xs text-slate-500 dark:text-slate-400 sm:text-sm">
-                {personal ? 'Personal schedule' : `CSE · Batch 69 · ${selectedSection}${labGroup !== 'all' ? ` · Group ${labGroup}` : ''}`}
+                {`CSE • Batch 69_${selectedSection.replace(/^69_/, '')}${labGroup !== 'all' ? labGroup : ''}`}
               </p>
             </div>
             <div className="flex shrink-0 items-center gap-1 sm:gap-1.5">
@@ -517,6 +533,30 @@ export default function Page() {
               </button>
             </div>
           </header>
+
+          {personal && personalRoutineStatus !== 'ready' && (
+            <div
+              role={personalRoutineStatus === 'error' || personalRoutineStatus === 'missing' ? 'alert' : 'status'}
+              className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-[#FF9F0A]/20 bg-[#FF9F0A]/[0.08] px-3 py-2 text-[12px] text-slate-600 dark:text-slate-300"
+            >
+              <span>
+                {personalRoutineStatus === 'loading'
+                  ? 'Loading your private retake routine…'
+                  : personalRoutineStatus === 'missing'
+                    ? 'Your account is signed in, but no private retake routine is set up yet.'
+                    : 'Could not load your private retake routine. Check your connection and try again.'}
+              </span>
+              {(personalRoutineStatus === 'error' || personalRoutineStatus === 'missing') && (
+                <button
+                  type="button"
+                  onClick={() => setPersonalRoutineRetry((attempt) => attempt + 1)}
+                  className={`shrink-0 font-semibold text-[#007AFF] dark:text-[#0A84FF] ${FOCUS_RING}`}
+                >
+                  Retry
+                </button>
+              )}
+            </div>
+          )}
 
           {scheduleNotice && (
             <section role="status" className="panel mt-3 flex items-start gap-2.5 rounded-2xl border border-[#007AFF]/20 p-3 dark:border-[#0A84FF]/20">
