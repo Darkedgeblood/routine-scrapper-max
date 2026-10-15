@@ -25,7 +25,7 @@
 - **Deadline tracking:** Add quizzes, assignments, and presentations, then mark them complete.
 - **Optional reminders:** Enable class and deadline alerts on supported devices.
 - **Calendar export:** Download a recurring `.ics` file for a chosen number of weeks and import it into a calendar app. Holidays and one-off room changes are not included in the export.
-- **Bangladesh holiday labels:** See listed national holidays in place of that day's class cards.
+- **National holiday labels:** See listed national holidays in place of that day's class cards.
 - **Feedback in the app:** Report a schedule correction or suggest an improvement.
 
 ## Use it on your phone
