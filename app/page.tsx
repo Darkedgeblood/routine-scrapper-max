@@ -1,7 +1,7 @@
 'use client'
 
-import { Fragment, startTransition, useEffect, useMemo, useState } from 'react'
-import { BookOpen, CalendarDays, CircleAlert, Clock, Coffee, Download, MapPin, Plus, Settings2, Users, X } from 'lucide-react'
+import { Fragment, startTransition, useEffect, useMemo, useRef, useState } from 'react'
+import { ArrowDown, BookOpen, CalendarDays, CircleAlert, Clock, Coffee, Download, MapPin, Plus, Settings2, Users, X } from 'lucide-react'
 
 import {
   DAYS,
@@ -125,6 +125,7 @@ export default function Page() {
   const [personalRoutine, setPersonalRoutine] = useState<PersonalRoutine | null>(null)
   const [personalRoutineStatus, setPersonalRoutineStatus] = useState<'idle' | 'loading' | 'ready' | 'missing' | 'error'>('idle')
   const [personalRoutineRetry, setPersonalRoutineRetry] = useState(0)
+  const classListRef = useRef<HTMLDivElement>(null)
   const personal = auth.email?.trim().toLowerCase() === PERSONAL_OWNER_EMAIL
   const personalClasses = personal ? personalRoutine?.routine ?? EMPTY_ROUTINE : EMPTY_ROUTINE
   const skippedCourses = personal ? personalRoutine?.skipped_courses ?? EMPTY_LIST : EMPTY_LIST
@@ -393,12 +394,8 @@ export default function Page() {
   const totalDurationMinutes = visibleDayClasses
     .filter((item) => !isInactive(item, skippedCourses, skippedLabs, labGroup))
     .reduce((total, item) => total + item.endMinutes - item.startMinutes, 0)
-  const totalDurationLabel = `Total: ${Math.floor(totalDurationMinutes / 60)}h ${totalDurationMinutes % 60}m`
   const regularCount = visibleDayClasses.filter((item) => !item.isRetake && !isInactive(item, skippedCourses, skippedLabs, labGroup)).length
   const currentMinutes = now ? now.getHours() * 60 + now.getMinutes() : -1
-  const selectedDateLabel = selectedDate
-    ? selectedDate.toLocaleDateString('en-US', { day: 'numeric', month: 'short' })
-    : ''
   const dayReminders = selectedDate ? pendingByDate[toDateKey(selectedDate)] ?? [] : []
   const dayDoneCount = selectedDate
     ? reminders.filter((r) => r.done && r.date === toDateKey(selectedDate)).length
@@ -543,14 +540,25 @@ export default function Page() {
                 {personalRoutineStatus === 'loading'
                   ? 'Loading your private retake routine…'
                   : personalRoutineStatus === 'missing'
-                    ? 'Your account is signed in, but no private retake routine is set up yet.'
+                    ? 'Your private retake routine is missing from this app’s connected database.'
                     : 'Could not load your private retake routine. Check your connection and try again.'}
               </span>
               {(personalRoutineStatus === 'error' || personalRoutineStatus === 'missing') && (
                 <button
                   type="button"
-                  onClick={() => setPersonalRoutineRetry((attempt) => attempt + 1)}
-                  className={`shrink-0 font-semibold text-[#007AFF] dark:text-[#0A84FF] ${FOCUS_RING}`}
+                  onClick={async () => {
+                    setPersonalRoutineStatus('loading')
+                    try {
+                      if (supabase) {
+                        const { error } = await supabase.auth.refreshSession()
+                        if (error) console.warn('Could not refresh session before retrying private routine', error)
+                      }
+                    } catch (error) {
+                      console.warn('Could not refresh session before retrying private routine', error)
+                    }
+                    setPersonalRoutineRetry((attempt) => attempt + 1)
+                  }}
+                  className={`shrink-0 rounded-full px-2 py-1 font-semibold text-[#007AFF] dark:text-[#0A84FF] ${FOCUS_RING}`}
                 >
                   Retry
                 </button>
@@ -635,13 +643,15 @@ export default function Page() {
 
           {/* Quizzes, assignments & presentations for the selected day */}
           <section className="panel mt-3 rounded-3xl p-4">
-            <div className="flex items-center justify-between">
-              <p className="text-[15px] font-semibold">Quiz · Assignment · Presentation</p>
-              <p className="text-[13px] text-slate-500 dark:text-slate-400">{isViewingToday ? 'Today' : selectedDateLabel}</p>
+            <div className="flex items-center gap-3 text-slate-400 dark:text-slate-500" aria-label="Reminder types">
+              {(['quiz', 'assignment', 'presentation'] as const).map((type) => {
+                const Icon = TYPE_META[type].Icon
+                return <Icon key={type} aria-hidden="true" className="size-4" />
+              })}
             </div>
             {!auth.user ? (
               <div className="mt-3 flex items-center justify-between gap-3">
-                <p className="text-[14px] text-slate-400 dark:text-slate-500">Sign in to track quizzes, assignments and presentations.</p>
+                <p className="text-[14px] text-slate-400 dark:text-slate-500">Sign in to sync your reminders.</p>
                 <button
                   type="button"
                   onClick={() => openAccount()}
@@ -651,23 +661,17 @@ export default function Page() {
                 </button>
               </div>
             ) : dayReminders.length > 0 && now ? (
-              <div className="mt-1 divide-y divide-slate-200 dark:divide-white/10">
+              <div className="mt-2 divide-y divide-slate-200 dark:divide-white/10">
                 {dayReminders.map((r) => (
                   <ReminderRow key={r.id} reminder={r} now={now} onToggle={toggleReminder} showDate={false} />
                 ))}
               </div>
             ) : (
-              <div className="mt-3 flex items-center gap-3 text-slate-400 dark:text-slate-500">
-                <span className="flex shrink-0 gap-1.5" aria-hidden="true">
-                  {(['quiz', 'assignment', 'presentation'] as const).map((t) => {
-                    const Icon = TYPE_META[t].Icon
-                    return <Icon key={t} className="size-4" />
-                  })}
-                </span>
+              <div className="mt-2 text-slate-400 dark:text-slate-500">
                 <p className="text-[14px]">
                   {dayDoneCount > 0
-                    ? `All done ${isViewingToday ? 'today' : 'for this day'}.`
-                    : `No presentation, assignment or quiz ${isViewingToday ? 'today' : 'this day'}.`}
+                    ? `All reminders completed ${isViewingToday ? 'today' : 'for this day'}.`
+                    : `No reminders due ${isViewingToday ? 'today' : 'on this day'}.`}
                 </p>
               </div>
             )}
@@ -675,24 +679,16 @@ export default function Page() {
 
           {/* Schedule (iOS inset grouped list) */}
           <section className="mt-7">
-            <div className="mb-3 flex items-end justify-between gap-4 px-1">
-              <div>
-                <h2 className="text-[22px] font-bold tracking-tight">{FULL_DAYS[selectedDay]}</h2>
-                <p className="mt-0.5 text-[13px] text-slate-500 dark:text-slate-400">
-                  {selectedHoliday
-                    ? 'National holiday — no classes scheduled.'
-                    : visibleDayClasses.length
-                    ? `${visibleDayClasses.length} classes from your routine`
-                    : sectionHasData
-                    ? 'A clear day — no classes scheduled.'
-                    : `No routine added for ${selectedSection} yet.`}
-                </p>
-              </div>
-              {totalDurationMinutes > 0 && (
-                <p className="shrink-0 pb-0.5 text-right text-[12px] font-medium text-slate-400 dark:text-slate-500">
-                  {totalDurationLabel}
-                </p>
-              )}
+            <div className="mb-3 flex justify-center">
+              <button
+                type="button"
+                onClick={() => classListRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+                className={`flex items-center gap-2 rounded-full px-4 py-2 text-[13px] font-semibold text-slate-500 transition-colors hover:text-[#007AFF] motion-reduce:transition-none dark:text-slate-400 dark:hover:text-[#0A84FF] ${FOCUS_RING}`}
+                aria-label={`Scroll to ${FULL_DAYS[selectedDay]} classes`}
+              >
+                <span className="animate-bounce motion-reduce:animate-none">Scroll down</span>
+                <ArrowDown className="size-4 animate-bounce motion-reduce:animate-none" aria-hidden="true" />
+              </button>
             </div>
 
             {isNextWeek && (
@@ -707,7 +703,7 @@ export default function Page() {
               </div>
             )}
 
-            <div className="flex flex-col gap-2.5">
+            <div ref={classListRef} tabIndex={-1} className="flex scroll-mt-20 flex-col gap-2.5 outline-none">
               {selectedHoliday ? (
                 <article className="panel flex items-center gap-3 rounded-2xl p-4">
                   <CalendarDays className="size-6 shrink-0 text-[#007AFF] dark:text-[#0A84FF]" />
