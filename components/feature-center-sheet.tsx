@@ -161,7 +161,7 @@ export function FeatureCenterSheet({
             {notificationsEnabled ? (
               <div className="mt-3 flex items-center justify-between gap-3">
                 <label htmlFor="class-alert-lead" className="text-[12px] text-slate-500 dark:text-slate-400">Before class</label>
-                <select id="class-alert-lead" value={notificationLead} onChange={(event) => onLeadChange(Number(event.target.value))} className={`${FIELD} max-w-36`}>
+                <select id="class-alert-lead" value={notificationLead} onChange={(event) => onLeadChange(Number(event.target.value))} className={`${FIELD} max-w-36 text-center`}>
                   {[5, 10, 15, 30].map((minutes) => <option key={minutes} value={minutes}>{minutes} minutes</option>)}
                 </select>
                 <button type="button" onClick={onDisableNotifications} className={`shrink-0 text-[12px] font-semibold text-[#FF453A] ${FOCUS}`}>Turn off</button>
@@ -188,12 +188,12 @@ export function FeatureCenterSheet({
             </div>
             <div className="mt-3 grid grid-cols-[auto_minmax(0,1fr)] items-center gap-2">
               <label htmlFor="calendar-weeks" className="shrink-0 text-[12px] text-slate-500 dark:text-slate-400">Repeat for</label>
-              <select id="calendar-weeks" value={weeks} onChange={(event) => setWeeks(Number(event.target.value))} className={`${FIELD} w-full min-w-0`}>
+              <select id="calendar-weeks" value={weeks} onChange={(event) => setWeeks(Number(event.target.value))} className={`${FIELD} w-full min-w-0 text-center`}>
                 {[4, 8, 12, 16, 20, 24].map((count) => <option key={count} value={count}>{count} weeks</option>)}
               </select>
               <button type="button" onClick={() => onExportCalendar(weeks)} disabled={classes.length === 0} className={`ios-active col-span-2 flex w-full items-center justify-center gap-2 whitespace-nowrap rounded-full py-2.5 text-[13px] font-semibold disabled:opacity-40 ${FOCUS}`}>
                 <CalendarDays aria-hidden="true" className="size-4 shrink-0" />
-                <span>Export .ics</span>
+                <span>Export calendar (.ics)</span>
               </button>
             </div>
             <p className="mt-2 text-[11px] text-slate-400 dark:text-slate-500">Events repeat weekly; holidays and one-off room changes aren’t included in the calendar file.</p>
@@ -210,7 +210,7 @@ export function FeatureCenterSheet({
             <form onSubmit={sendFeedback} className="mt-3 grid gap-2.5">
               <label className="grid gap-1">
                 <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">Feedback type</span>
-                <select value={feedbackType} onChange={(event) => setFeedbackType(event.target.value)} className={FIELD}>
+                <select value={feedbackType} onChange={(event) => setFeedbackType(event.target.value)} className={`${FIELD} text-center`}>
                   {['Routine correction', 'Feature idea', 'Other feedback'].map((value) => <option key={value}>{value}</option>)}
                 </select>
               </label>
@@ -218,7 +218,7 @@ export function FeatureCenterSheet({
                 <label className="grid gap-1">
                   <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">Related class (optional)</span>
                   <span className="relative">
-                    <select value={feedbackClass} onChange={(event) => setFeedbackClass(event.target.value)} className={`${FIELD} appearance-none pr-8`}>
+                    <select value={feedbackClass} onChange={(event) => setFeedbackClass(event.target.value)} className={`${FIELD} appearance-none pr-8 text-center`}>
                       <option value="">Select a class</option>
                       {distinctClasses.map((item) => <option key={`${item.courseCode}|${item.subSection ?? ''}`} value={`${item.courseCode}${item.subSection ? ` ${item.subSection}` : ''}`}>{item.courseCode}{item.subSection ? ` · ${item.subSection}` : ''}</option>)}
                     </select>

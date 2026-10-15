@@ -87,7 +87,26 @@ create policy "reminders: own rows" on public.reminders
   for all to authenticated
   using (user_id = (select auth.uid())) with check (user_id = (select auth.uid()));
 
--- 4) Profile pictures: public-read bucket, each user may only write inside their own folder
+-- 4) Owner-only personal routine. The schedule is stored in the database so it is
+--    not included in the public JavaScript bundle downloaded by every app user.
+create table if not exists public.personal_routines (
+  owner_email text primary key check (owner_email = lower(owner_email)),
+  routine jsonb not null default '[]'::jsonb check (jsonb_typeof(routine) = 'array'),
+  skipped_courses text[] not null default '{}',
+  skipped_labs text[] not null default '{}',
+  updated_at timestamptz not null default now()
+);
+
+alter table public.personal_routines enable row level security;
+revoke all on table public.personal_routines from anon, authenticated;
+grant select on table public.personal_routines to authenticated;
+
+drop policy if exists "personal routine: owner read only" on public.personal_routines;
+create policy "personal routine: owner read only" on public.personal_routines
+  for select to authenticated
+  using (owner_email = lower((select auth.jwt()) ->> 'email'));
+
+-- 5) Profile pictures: public-read bucket, each user may only write inside their own folder
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values ('avatars', 'avatars', true, 524288, array['image/jpeg', 'image/png', 'image/webp'])
 on conflict (id) do update
