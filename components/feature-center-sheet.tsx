@@ -113,7 +113,7 @@ export function FeatureCenterSheet({
           </button>
         </div>
 
-        <div className="overflow-y-auto px-5 pb-7">
+        <div className="sheet-scrollbar-hidden min-h-0 overflow-y-auto overscroll-contain px-5 pb-7">
           {scheduleNotice && (
             <section className="mt-3 rounded-2xl border border-[#007AFF]/20 bg-[#007AFF]/[0.06] p-3 dark:border-[#0A84FF]/20 dark:bg-[#0A84FF]/[0.08]">
               <div className="flex items-start gap-2">
