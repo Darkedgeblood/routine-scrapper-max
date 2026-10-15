@@ -1,7 +1,7 @@
 'use client'
 
 import { Fragment, startTransition, useEffect, useMemo, useState } from 'react'
-import { BookOpen, CalendarDays, CircleAlert, Clock, Coffee, MapPin, Plus, Settings2, Users, X } from 'lucide-react'
+import { BookOpen, CalendarDays, CircleAlert, Clock, Coffee, Download, MapPin, Plus, Settings2, Users, X } from 'lucide-react'
 
 import {
   DAYS,
@@ -20,6 +20,7 @@ import { downloadRoutineCalendar } from '@/lib/calendar-export'
 import { clearScheduledNotifications, requestNotificationPermission, sendTestNotification, syncScheduledNotifications } from '@/lib/notification-scheduler'
 import { BANGLADESH_NATIONAL_HOLIDAYS, getBangladeshNationalHoliday } from '@/lib/bangladesh-holidays'
 import { checkForScheduleChanges, dismissScheduleNotice, type ScheduleNotice } from '@/lib/schedule-changes'
+import { monitorAppUpdates, startApkUpdate, type AppUpdate } from '@/lib/app-updates'
 import { supabase } from '@/lib/supabase'
 
 const PERSONAL_OWNER_EMAIL = '252-15-596@diu.edu.bd'
@@ -96,6 +97,7 @@ export default function Page() {
   const [featuresOpen, setFeaturesOpen] = useState(false)
   const [labGroup, setLabGroup] = useState('all')
   const [scheduleNotice, setScheduleNotice] = useState<ScheduleNotice | null>(null)
+  const [appUpdate, setAppUpdate] = useState<AppUpdate | null>(null)
   const [notificationsEnabled, setNotificationsEnabled] = useState(false)
   const [notificationLead, setNotificationLead] = useState(10)
   const [notificationError, setNotificationError] = useState<string | null>(null)
@@ -313,6 +315,8 @@ export default function Page() {
 
   useEffect(() => () => { void clearScheduledNotifications() }, [])
 
+  useEffect(() => monitorAppUpdates(setAppUpdate), [])
+
   const weekDates = useMemo(() => (now ? getWeekDates(now) : null), [now])
   const selectedDate = weekDates ? weekDates[DAYS.indexOf(selectedDay)] : null
   const selectedHoliday = getBangladeshNationalHoliday(selectedDate)
@@ -523,6 +527,25 @@ export default function Page() {
               </button>
               <button type="button" onClick={dismissNotice} aria-label="Dismiss routine update" className={`flex size-7 shrink-0 items-center justify-center rounded-full text-slate-400 hover:bg-black/5 dark:hover:bg-white/10 ${FOCUS_RING}`}>
                 <X className="size-4" />
+              </button>
+            </section>
+          )}
+
+          {appUpdate && (
+            <section role="status" className="panel mt-3 flex items-center gap-3 rounded-2xl border border-[#007AFF]/20 p-3 dark:border-[#0A84FF]/20">
+              <Download className="size-5 shrink-0 text-[#007AFF] dark:text-[#0A84FF]" />
+              <div className="min-w-0 flex-1">
+                <p className="text-[13px] font-semibold">
+                  {appUpdate.critical ? 'Important app update available' : 'App update available'}
+                </p>
+                <p className="text-[12px] text-slate-500 dark:text-slate-400">Tap to download version {appUpdate.build}.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => void startApkUpdate(appUpdate.apkUrl)}
+                className={`shrink-0 rounded-full bg-[#007AFF] px-3 py-2 text-[12px] font-semibold text-white dark:bg-[#0A84FF] ${FOCUS_RING}`}
+              >
+                Update
               </button>
             </section>
           )}
