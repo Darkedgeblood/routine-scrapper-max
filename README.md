@@ -1,53 +1,88 @@
-# routine-scrapper-max
+# Routine Scrapper Max
 
-This is a [Next.js](https://nextjs.org) project bootstrapped with [v0](https://v0.app).
+<p align="center">
+  <img src="public/app-icon.png" alt="Routine Scrapper Max app icon" width="112" />
+</p>
 
-## Built with v0
+<p align="center">
+  <strong>A clearer way to follow the CSE Batch 69 routine.</strong><br />
+  Find your classes, keep track of deadlines, and get your schedule on your phone.
+</p>
 
-This repository is linked to a [v0](https://v0.app) project. You can continue developing by visiting the link below -- start new chats to make changes, and v0 will push commits directly to this repo. Every merge to `main` will automatically deploy.
+<p align="center">
+  <a href="https://routine-scrapper-max.vercel.app"><strong>Open the app</strong></a>
+  ·
+  <a href="https://github.com/Darkedgeblood/routine-scrapper-max/releases/latest">Download the latest Android APK</a>
+</p>
 
-[Continue working on v0 →](https://v0.app/chat/projects/prj_XTDFVelbATbrwPU2qiKS8UgwpU9i)
+---
 
-## Getting Started
+## What it does
 
-First, run the development server:
+- **Schedules for Batch 69:** Browse sections `69_A` through `69_P` and see course times, rooms, instructors, and lab sections.
+- **Lab group filters:** Focus on Group 1 or Group 2 while keeping other groups visible for reference.
+- **At-a-glance day view:** Check the current time, first or next class, class count, and total class time.
+- **Deadline tracking:** Add quizzes, assignments, and presentations, then mark them complete.
+- **Optional reminders:** Enable class and deadline alerts on supported devices.
+- **Calendar export:** Download a recurring `.ics` file for a chosen number of weeks and import it into a calendar app. Holidays and one-off room changes are not included in the export.
+- **Bangladesh holiday labels:** See listed national holidays in place of that day's class cards.
+- **Feedback in the app:** Report a schedule correction or suggest an improvement.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
+## Use it on your phone
+
+### Android
+
+Download the APK from [GitHub Releases](https://github.com/Darkedgeblood/routine-scrapper-max/releases/latest). Android will ask you to confirm installation. Future APKs use the same signing key so supported existing installs can update in place. See the [Android release guide](docs/android-releases.md) for maintainer setup and release details.
+
+### iPhone
+
+Open [the web app](https://routine-scrapper-max.vercel.app) in Safari, tap **Share → Add to Home Screen**, enable **Open as Web App**, then tap **Add**. This creates a home-screen shortcut to the web app; it is not a native iOS APK.
+
+## Run locally
+
+The project uses Node.js 22 and pnpm. From the repository root:
+
+```sh
+corepack enable
+corepack prepare pnpm@12.3.4 --activate
+pnpm install --allow-build=sharp
 pnpm dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Then open [http://localhost:3000](http://localhost:3000).
 
-## Android updates
+For account-backed features, configure these public Supabase project values in `.env.local`:
 
-APK releases must be signed with the same private key every time. Create a release keystore once and keep a secure backup; losing it prevents future APKs from updating existing installs.
-
-```powershell
-keytool -genkeypair -v -keystore RoutineScrapperMax-release.jks -alias routine-scrapper-max -keyalg RSA -keysize 2048 -validity 10000
-[Convert]::ToBase64String([IO.File]::ReadAllBytes('.\RoutineScrapperMax-release.jks')) | Set-Clipboard
+```dotenv
+NEXT_PUBLIC_SUPABASE_URL=your-project-url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-public-anon-key
 ```
 
-In the GitHub repository, open **Settings → Secrets and variables → Actions** and add these repository secrets:
+The routine can still be browsed without Supabase configuration; account features need a configured project and its database schema from [`supabase/schema.sql`](supabase/schema.sql).
 
-- `ANDROID_KEYSTORE_BASE64`: the Base64 value copied above
-- `ANDROID_KEY_ALIAS`: `routine-scrapper-max`
-- `ANDROID_STORE_PASSWORD`: the keystore password entered in `keytool`
-- `ANDROID_KEY_PASSWORD`: the key password entered in `keytool`
+Useful commands:
 
-The APK workflow intentionally stops if the signing key is unavailable instead of publishing an APK that cannot update the installed app. The current published APKs were signed with different temporary debug keys. Android cannot update those installs with a new key, so everyone on those builds must uninstall once before installing the first stable signed release. Future releases will install over the app normally.
+```sh
+pnpm dev       # Start the development server
+pnpm build     # Build the production web app
+pnpm start     # Run the production build locally
+```
 
-The app checks GitHub Releases on launch and when it returns to the foreground. If Android notifications are allowed, it sends one notification for each new release; tapping it starts the APK download. Android then shows its installer confirmation, which the user must approve. Releases marked `Update urgency: critical` use an important update notice. To publish one, manually run **Actions → Build Android APK** and select **critical**. This is an in-app update flow, not a silent installation or a push service; a phone checks for updates when the app is opened/resumed.
+## Project layout
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| Path | Purpose |
+| --- | --- |
+| `app/` | Next.js app routes, page, manifest, and styling |
+| `components/` | Schedule, account, reminder, and settings UI |
+| `lib/` | Routine data, holidays, reminders, notifications, and app logic |
+| `supabase/` | Database schema for account-backed features |
+| `.github/workflows/` | Android APK build and release automation |
+| `docs/` | Maintainer and release documentation |
 
-## Learn More
+## Contributing
 
-To learn more, take a look at the following resources:
+Use the in-app feedback form to report a routine correction or share an idea. Code changes can be submitted through GitHub pull requests. Please do not commit passwords, signing keys, or other private credentials.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-- [v0 Documentation](https://v0.app/docs) - learn about v0 and how to use it.
+---
+
+<p align="center"><sub>Built for CSE Batch 69.</sub></p>
