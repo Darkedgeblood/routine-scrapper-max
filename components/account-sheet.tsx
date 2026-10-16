@@ -1,15 +1,17 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { Camera, Eye, EyeOff, LogOut, Moon, Sun, User as UserIcon, X } from 'lucide-react'
+import { Camera, Eye, EyeOff, LogOut, User as UserIcon, X } from 'lucide-react'
 
 import { ALLOWED_EMAIL_DOMAIN, BIO_MAX, MIN_PASSWORD_LENGTH, NAME_MAX, type AuthResult, type AuthState } from '@/lib/auth'
 import { SECTIONS } from '@/lib/routine-data'
+import { useSheetMotion } from '@/components/sheet-motion'
 
 const FIELD =
-  'w-full rounded-xl border border-slate-200 bg-transparent px-3 py-2.5 text-[15px] outline-none transition-colors focus-visible:ring-2 focus-visible:ring-[#007AFF]/60 dark:border-white/10 dark:focus-visible:ring-[#0A84FF]/60'
+  'settings-field w-full text-[15px] outline-none transition-colors focus-visible:ring-2 focus-visible:ring-[#007AFF]/60 dark:focus-visible:ring-[#0A84FF]/60'
 const PRIMARY =
-  'ios-active w-full rounded-full py-2.5 text-[15px] font-semibold transition-opacity disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007AFF]/60'
+  'ios-pressable ios-active w-full rounded-full py-2.5 text-[15px] font-semibold transition-opacity disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007AFF]/60'
+type ThemeMode = 'light' | 'dark' | 'system'
 
 // Round profile picture, falling back to the first letter of the name / email.
 export function Avatar({
@@ -45,8 +47,8 @@ export function AccountSheet({
   onClose,
   auth,
   reason,
-  dark,
-  onToggleDark,
+  themeMode,
+  onThemeModeChange,
   section,
   onChooseSection,
 }: {
@@ -54,11 +56,13 @@ export function AccountSheet({
   onClose: () => void
   auth: AuthState
   reason?: string
-  dark: boolean
-  onToggleDark: () => void
+  themeMode: ThemeMode
+  onThemeModeChange: (mode: ThemeMode) => void
   section: string
   onChooseSection: (section: string) => void
 }) {
+  const sheet = useSheetMotion(open, onClose)
+
   useEffect(() => {
     if (!open) return
     const onKey = (e: KeyboardEvent) => {
@@ -73,32 +77,36 @@ export function AccountSheet({
     }
   }, [open, onClose])
 
-  if (!open) return null
+  if (!sheet.mounted) return null
 
   const heading = auth.recovery ? 'New password' : auth.user ? 'Your profile' : 'Account'
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center" role="presentation">
-      <div className="animate-backdrop absolute inset-0 bg-black/50" onClick={onClose} aria-hidden="true" />
+    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center" data-state={sheet.phase} role="presentation">
+      <button type="button" aria-label="Close profile" className="sheet-backdrop absolute inset-0 bg-black/50" onClick={onClose} />
       <div
+        ref={sheet.panelRef}
         role="dialog"
         aria-modal="true"
         aria-label={heading}
-        className="animate-sheet panel relative flex max-h-[90vh] w-full max-w-md flex-col rounded-t-3xl sm:rounded-3xl"
+        className="sheet-surface settings-sheet relative flex max-h-[92dvh] w-full max-w-md flex-col rounded-t-[28px] sm:rounded-3xl"
       >
-        <div className="flex items-center justify-between px-5 pb-2 pt-5">
+        <div className="sheet-drag-handle flex h-7 shrink-0 items-center justify-center sm:hidden" {...sheet.dragHandleProps} aria-hidden="true">
+          <span className="sheet-grabber" />
+        </div>
+        <div className="flex items-center justify-between px-5 pb-3 pt-1 sm:pt-5">
           <h2 className="text-[22px] font-bold tracking-tight">{heading}</h2>
           <button
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="flex size-9 items-center justify-center rounded-full bg-black/5 text-slate-500 transition-colors hover:bg-black/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007AFF]/60 dark:bg-white/10 dark:text-slate-300 dark:hover:bg-white/15"
+            className="ios-pressable flex size-11 items-center justify-center rounded-full bg-black/5 text-slate-500 hover:bg-black/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007AFF]/60 dark:bg-white/10 dark:text-slate-300 dark:hover:bg-white/15"
           >
             <X className="size-5" />
           </button>
         </div>
 
-        <div className="overflow-y-auto px-5 pb-6">
+        <div className="sheet-scrollbar-hidden min-h-0 overflow-y-auto overscroll-contain px-5 pb-[calc(24px+env(safe-area-inset-bottom))]">
           {!auth.configured ? (
             <p className="py-4 text-[14px] text-slate-500 dark:text-slate-400">
               Accounts are not set up on this deployment yet. The class routine still works as usual.
@@ -108,7 +116,7 @@ export function AccountSheet({
           ) : auth.recovery && auth.user ? (
             <NewPasswordForm auth={auth} onDone={onClose} />
           ) : auth.user ? (
-            <ProfileView auth={auth} onClose={onClose} dark={dark} onToggleDark={onToggleDark} section={section} onChooseSection={onChooseSection} />
+            <ProfileView auth={auth} onClose={onClose} themeMode={themeMode} onThemeModeChange={onThemeModeChange} section={section} onChooseSection={onChooseSection} />
           ) : (
             <SignedOutView auth={auth} reason={reason} section={section} onChooseSection={onChooseSection} />
           )}
@@ -220,14 +228,14 @@ function SignedOutView({
       {reason && <p className="mb-3 text-[14px] text-slate-500 dark:text-slate-400">{reason}</p>}
 
       {mode !== 'forgot' && (
-        <div className="flex gap-1.5" role="group" aria-label="Sign in or create account">
+        <div className="settings-segmented" role="group" aria-label="Sign in or create account">
           {(['signin', 'signup'] as const).map((m) => (
             <button
               key={m}
               type="button"
               onClick={() => switchMode(m)}
               aria-pressed={mode === m}
-              className={`flex-1 rounded-full px-2 py-1.5 text-[13px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007AFF]/60 ${
+              className={`ios-pressable flex-1 px-2 py-1.5 text-[13px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007AFF]/60 ${
                 mode === m ? 'ios-active' : 'text-slate-600 hover:bg-black/5 dark:text-slate-300 dark:hover:bg-white/10'
               }`}
             >
@@ -241,7 +249,7 @@ function SignedOutView({
         <p className="text-[14px] text-slate-500 dark:text-slate-400">Enter your university email and we will send you a link to reset your password.</p>
       )}
 
-      <form onSubmit={submit} className="mt-3 grid gap-2.5">
+      <form onSubmit={submit} className="settings-group mt-3 grid gap-3 p-4">
         <label className="grid gap-1">
           <span className="text-[12px] font-medium text-slate-500 dark:text-slate-400">University email</span>
           <input
@@ -308,7 +316,7 @@ function NewPasswordForm({ auth, onDone }: { auth: AuthState; onDone: () => void
   }
 
   return (
-    <form onSubmit={submit} className="grid gap-2.5">
+    <form onSubmit={submit} className="settings-group grid gap-3 p-4">
       <p className="text-[14px] text-slate-500 dark:text-slate-400">Choose a new password for {auth.email}.</p>
       <PasswordField value={password} onChange={setPassword} label="New password" autoComplete="new-password" />
       <button type="submit" disabled={busy} className={`${PRIMARY} mt-1`}>
@@ -322,15 +330,15 @@ function NewPasswordForm({ auth, onDone }: { auth: AuthState; onDone: () => void
 function ProfileView({
   auth,
   onClose,
-  dark,
-  onToggleDark,
+  themeMode,
+  onThemeModeChange,
   section,
   onChooseSection,
 }: {
   auth: AuthState
   onClose: () => void
-  dark: boolean
-  onToggleDark: () => void
+  themeMode: ThemeMode
+  onThemeModeChange: (mode: ThemeMode) => void
   section: string
   onChooseSection: (section: string) => void
 }) {
@@ -357,7 +365,7 @@ function ProfileView({
         <SectionPanel section={section} onChoose={onChooseSection} />
       ) : (
         <>
-      <div className="flex flex-col items-center gap-2 pb-4 pt-1">
+      <section className="settings-group flex flex-col items-center gap-2 p-4">
         <Avatar url={auth.profile?.avatar_url} name={auth.profile?.display_name} email={auth.email} className="size-24 text-[36px]" />
         <input ref={fileRef} type="file" accept="image/*" onChange={onPick} className="hidden" />
         <button
@@ -370,27 +378,22 @@ function ProfileView({
           {photoBusy ? 'Uploading…' : auth.profile?.avatar_url ? 'Change photo' : 'Add photo'}
         </button>
         <Notice result={photoResult} />
-      </div>
+      </section>
 
       <ProfileForm key={`${auth.userId}-${auth.profile ? 'loaded' : 'loading'}`} auth={auth} />
         </>
       )}
 
-      <button
-        type="button"
-        role="switch"
-        aria-checked={dark}
-        onClick={onToggleDark}
-        className="mt-4 flex w-full items-center justify-between rounded-xl border border-slate-200 px-3 py-2.5 text-[15px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007AFF]/60 dark:border-white/10"
-      >
-        <span className="flex items-center gap-2">
-          {dark ? <Moon className="size-4" aria-hidden="true" /> : <Sun className="size-4" aria-hidden="true" />}
-          Dark mode
-        </span>
-        <span className={`relative h-6 w-10 rounded-full transition-colors ${dark ? 'bg-[#30D158]' : 'bg-slate-300'}`}>
-          <span className={`absolute top-0.5 size-5 rounded-full bg-white shadow transition-all ${dark ? 'left-[18px]' : 'left-0.5'}`} />
-        </span>
-      </button>
+      <section className="mt-5">
+        <h3 className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Appearance</h3>
+        <div className="settings-segmented" role="group" aria-label="Appearance">
+          {(['light', 'dark', 'system'] as const).map((mode) => (
+            <button key={mode} type="button" aria-pressed={themeMode === mode} onClick={() => onThemeModeChange(mode)} className="ios-pressable text-[12px] capitalize focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007AFF]/60">
+              {mode === 'system' ? 'System Default' : mode}
+            </button>
+          ))}
+        </div>
+      </section>
 
       <button
         type="button"
@@ -409,14 +412,14 @@ function ProfileView({
 // Edit / Section switcher shown at the top of the profile sheet.
 function ProfileTabs({ tab, onChange }: { tab: 'edit' | 'section'; onChange: (tab: 'edit' | 'section') => void }) {
   return (
-    <div className="mb-3 flex gap-1 rounded-full bg-black/5 p-1 dark:bg-white/10" role="group" aria-label="Profile options">
+    <div className="settings-segmented mb-4" role="group" aria-label="Profile options">
       {(['edit', 'section'] as const).map((t) => (
         <button
           key={t}
           type="button"
           onClick={() => onChange(t)}
           aria-pressed={tab === t}
-          className={`flex-1 rounded-full py-1.5 text-[13px] font-semibold transition-colors ${
+          className={`ios-pressable flex-1 py-1.5 text-[13px] ${
             tab === t
               ? 'ios-active'
               : 'text-slate-600 hover:bg-black/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007AFF]/60 dark:text-slate-300 dark:hover:bg-white/10'
@@ -433,18 +436,18 @@ function ProfileTabs({ tab, onChange }: { tab: 'edit' | 'section'; onChange: (ta
 function SectionPanel({ section, onChoose }: { section: string; onChoose: (section: string) => void }) {
   return (
     <div className="pb-1">
-      <div className="mb-3 flex items-center justify-between rounded-xl bg-black/[0.03] px-3 py-2.5 dark:bg-white/[0.04]">
+      <div className="settings-group mb-3 flex min-h-11 items-center justify-between rounded-xl px-3 py-2.5">
         <span className="text-[12px] font-medium text-slate-500 dark:text-slate-400">Current section</span>
         <span className="text-[15px] font-semibold tabular-nums">{section}</span>
       </div>
-      <div className="grid grid-cols-4 gap-1.5">
+      <div className="settings-segmented">
         {SECTIONS.map((s) => (
           <button
             key={s}
             type="button"
             onClick={() => onChoose(s)}
             aria-pressed={section === s}
-            className={`rounded-full px-1 py-2 text-[13px] font-semibold tabular-nums transition ${
+            className={`ios-pressable px-1 py-2 text-[13px] tabular-nums ${
               section === s
                 ? 'ios-active'
                 : 'text-slate-600 hover:bg-black/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007AFF]/60 dark:text-slate-300 dark:hover:bg-white/10'
@@ -476,10 +479,10 @@ function ProfileForm({ auth }: { auth: AuthState }) {
   }
 
   return (
-    <form onSubmit={submit} className="grid gap-2.5">
+    <form onSubmit={submit} className="settings-group mt-3 grid gap-3 p-4">
       <div className="grid gap-1">
         <span className="text-[12px] font-medium text-slate-500 dark:text-slate-400">Email</span>
-        <p className="rounded-xl bg-black/[0.03] px-3 py-2.5 text-[15px] text-slate-500 dark:bg-white/[0.04] dark:text-slate-400">{auth.email}</p>
+        <p className="settings-field truncate text-[15px] text-slate-500 dark:text-slate-400">{auth.email}</p>
       </div>
       <label className="grid gap-1">
         <span className="text-[12px] font-medium text-slate-500 dark:text-slate-400">Name</span>
