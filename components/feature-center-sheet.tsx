@@ -5,9 +5,10 @@ import { Bell, CalendarDays, ChevronDown, CircleAlert, MessageSquareWarning, Sha
 
 import type { ScheduleNotice } from '@/lib/schedule-changes'
 import type { RoutineItem } from '@/lib/routine-data'
+import { useSheetMotion } from '@/components/sheet-motion'
 
 const FOCUS = 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007AFF]/60 dark:focus-visible:ring-[#0A84FF]/60'
-const FIELD = 'w-full rounded-xl border border-slate-200 bg-transparent px-3 py-2.5 text-[14px] outline-none dark:border-white/10'
+const FIELD = 'settings-field w-full text-[14px] outline-none'
 
 export function FeatureCenterSheet({
   open,
@@ -48,6 +49,7 @@ export function FeatureCenterSheet({
   notificationStatus: string | null
   onExportCalendar: (weeks: number) => void
 }) {
+  const sheet = useSheetMotion(open, onClose)
   const [weeks, setWeeks] = useState(16)
   const [feedbackType, setFeedbackType] = useState('Routine correction')
   const [feedbackClass, setFeedbackClass] = useState('')
@@ -66,7 +68,7 @@ export function FeatureCenterSheet({
     }
   }, [open, onClose])
 
-  if (!open) return null
+  if (!sheet.mounted) return null
 
   const sendFeedback = async (event: React.FormEvent) => {
     event.preventDefault()
@@ -100,20 +102,21 @@ export function FeatureCenterSheet({
   const distinctClasses = [...new Map(classes.map((item) => [`${item.courseCode}|${item.subSection ?? ''}`, item])).values()]
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center" role="presentation">
-      <button type="button" aria-label="Close features" className="animate-backdrop absolute inset-0 bg-black/50" onClick={onClose} />
-      <div role="dialog" aria-modal="true" aria-label="Schedule settings and tools" className="animate-sheet panel relative flex max-h-[90vh] w-full max-w-md flex-col rounded-t-3xl sm:rounded-3xl">
-        <div className="flex items-center justify-between px-5 pb-2 pt-5">
+    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center" data-state={sheet.phase} role="presentation">
+      <button type="button" aria-label="Close features" className="sheet-backdrop absolute inset-0 bg-black/50" onClick={onClose} />
+      <div ref={sheet.panelRef} role="dialog" aria-modal="true" aria-label="Schedule settings and tools" className="sheet-surface settings-sheet relative flex max-h-[92dvh] w-full max-w-md flex-col rounded-t-[28px] sm:rounded-3xl">
+        <div className="sheet-drag-handle flex h-7 shrink-0 items-center justify-center sm:hidden" {...sheet.dragHandleProps} aria-hidden="true"><span className="sheet-grabber" /></div>
+        <div className="flex items-center justify-between px-5 pb-3 pt-1 sm:pt-5">
           <div>
             <h2 className="text-[22px] font-bold tracking-tight">Your routine</h2>
             <p className="mt-0.5 text-[13px] text-slate-500 dark:text-slate-400">Personalize, export, and send feedback</p>
           </div>
-          <button type="button" onClick={onClose} aria-label="Close" className={`flex size-9 items-center justify-center rounded-full bg-black/5 text-slate-500 dark:bg-white/10 dark:text-slate-300 ${FOCUS}`}>
+          <button type="button" onClick={onClose} aria-label="Close" className={`ios-pressable flex size-11 items-center justify-center rounded-full bg-black/5 text-slate-500 dark:bg-white/10 dark:text-slate-300 ${FOCUS}`}>
             <X className="size-5" />
           </button>
         </div>
 
-        <div className="sheet-scrollbar-hidden min-h-0 overflow-y-auto overscroll-contain px-5 pb-7">
+        <div className="sheet-scrollbar-hidden min-h-0 overflow-y-auto overscroll-contain px-5 pb-[calc(28px+env(safe-area-inset-bottom))]">
           {scheduleNotice && (
             <section className="mt-3 rounded-2xl border border-[#007AFF]/20 bg-[#007AFF]/[0.06] p-3 dark:border-[#0A84FF]/20 dark:bg-[#0A84FF]/[0.08]">
               <div className="flex items-start gap-2">
@@ -129,16 +132,16 @@ export function FeatureCenterSheet({
             </section>
           )}
 
-          <section className="mt-4 rounded-2xl border border-slate-200 p-3.5 dark:border-white/10">
+          <section className="settings-group mt-4 rounded-2xl p-3.5">
             <h3 className="text-[14px] font-semibold">Lab group · {section}</h3>
             <p className="mt-1 text-[12px] text-slate-500 dark:text-slate-400">Choose your group to highlight its labs. Other groups stay visible but dimmed.</p>
-            <div className="mt-3 grid grid-cols-3 gap-1.5" role="group" aria-label="Highlight lab group">
+            <div className="settings-segmented mt-3" role="group" aria-label="Highlight lab group">
               {[
                 { value: 'all', label: 'All groups' },
                 ...labGroups.map((group) => ({ value: group, label: `Group ${group}` })),
               ].map((option) => (
                 <button key={option.value} type="button" onClick={() => onLabGroupChange(option.value)} aria-pressed={labGroup === option.value}
-                  className={`rounded-full px-2 py-2 text-[12px] font-semibold transition-colors ${FOCUS} ${labGroup === option.value ? 'ios-active' : 'text-slate-600 hover:bg-black/5 dark:text-slate-300 dark:hover:bg-white/10'}`}>
+                  className={`ios-pressable text-[12px] ${FOCUS} ${labGroup === option.value ? 'ios-active' : 'text-slate-600 hover:bg-black/5 dark:text-slate-300 dark:hover:bg-white/10'}`}>
                   {option.label}
                 </button>
               ))}
@@ -146,7 +149,7 @@ export function FeatureCenterSheet({
             </div>
           </section>
 
-          <section className="mt-3 rounded-2xl border border-slate-200 p-3.5 dark:border-white/10">
+          <section className="settings-group mt-3 rounded-2xl p-3.5">
             <div className="flex items-start gap-2.5">
               <Bell className="mt-0.5 size-4 shrink-0 text-[#007AFF] dark:text-[#0A84FF]" />
               <div className="min-w-0 flex-1">
@@ -167,7 +170,7 @@ export function FeatureCenterSheet({
                 <button type="button" onClick={onDisableNotifications} className={`shrink-0 text-[12px] font-semibold text-[#FF453A] ${FOCUS}`}>Turn off</button>
               </div>
             ) : (
-              <button type="button" onClick={() => void onEnableNotifications()} className={`ios-active mt-3 w-full rounded-full py-2.5 text-[13px] font-semibold ${FOCUS}`}>
+              <button type="button" onClick={() => void onEnableNotifications()} className={`ios-pressable ios-active mt-3 min-h-11 w-full rounded-full py-2.5 text-[13px] font-semibold ${FOCUS}`}>
                 Enable notifications
               </button>
             )}
@@ -178,7 +181,7 @@ export function FeatureCenterSheet({
             {notificationsEnabled && <p className="mt-2 text-[11px] text-slate-400 dark:text-slate-500">On Android, alerts are scheduled on your device and can arrive with the app closed. In a browser, keep the page open for scheduled alerts.</p>}
           </section>
 
-          <section className="mt-3 rounded-2xl border border-slate-200 p-3.5 dark:border-white/10">
+          <section className="settings-group mt-3 rounded-2xl p-3.5">
             <div className="flex items-start gap-2.5">
               <CalendarDays className="mt-0.5 size-4 shrink-0 text-[#007AFF] dark:text-[#0A84FF]" />
               <div>
@@ -191,7 +194,7 @@ export function FeatureCenterSheet({
               <select id="calendar-weeks" value={weeks} onChange={(event) => setWeeks(Number(event.target.value))} className={`${FIELD} w-full min-w-0 text-center`}>
                 {[4, 8, 12, 16, 20, 24].map((count) => <option key={count} value={count}>{count} weeks</option>)}
               </select>
-              <button type="button" onClick={() => onExportCalendar(weeks)} disabled={classes.length === 0} className={`ios-active col-span-2 flex w-full items-center justify-center gap-2 whitespace-nowrap rounded-full py-2.5 text-[13px] font-semibold disabled:opacity-40 ${FOCUS}`}>
+              <button type="button" onClick={() => onExportCalendar(weeks)} disabled={classes.length === 0} className={`ios-pressable ios-active col-span-2 flex min-h-11 w-full items-center justify-center gap-2 whitespace-nowrap rounded-full py-2.5 text-[13px] font-semibold disabled:opacity-40 ${FOCUS}`}>
                 <CalendarDays aria-hidden="true" className="size-4 shrink-0" />
                 <span>Export calendar (.ics)</span>
               </button>
@@ -199,7 +202,7 @@ export function FeatureCenterSheet({
             <p className="mt-2 text-[11px] text-slate-400 dark:text-slate-500">Events repeat weekly; holidays and one-off room changes aren’t included in the calendar file.</p>
           </section>
 
-          <section className="mt-3 rounded-2xl border border-slate-200 p-3.5 dark:border-white/10">
+          <section className="settings-group mt-3 rounded-2xl p-3.5">
             <div className="flex items-start gap-2.5">
               <MessageSquareWarning className="mt-0.5 size-4 shrink-0 text-[#007AFF] dark:text-[#0A84FF]" />
               <div>
@@ -230,7 +233,7 @@ export function FeatureCenterSheet({
                 <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400">Details</span>
                 <textarea required value={feedbackDetails} onChange={(event) => setFeedbackDetails(event.target.value.slice(0, 500))} rows={3} maxLength={500} placeholder="What should be corrected or added?" className={`${FIELD} resize-y`} />
               </label>
-              <button type="submit" className={`ios-active flex w-full items-center justify-center gap-2 rounded-full py-2.5 text-[13px] font-semibold ${FOCUS}`}>
+              <button type="submit" className={`ios-pressable ios-active flex min-h-11 w-full items-center justify-center gap-2 rounded-full py-2.5 text-[13px] font-semibold ${FOCUS}`}>
                 <Share2 className="size-4" /> Share feedback
               </button>
               {feedbackStatus && <p role="status" className="text-[12px] text-slate-500 dark:text-slate-400">{feedbackStatus}</p>}

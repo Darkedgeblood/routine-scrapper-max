@@ -39,6 +39,7 @@ const FOCUS_RING = 'focus-visible:outline-none focus-visible:ring-2 focus-visibl
 
 // iOS system blue — used only for functional accents (selection, live status).
 const IOS_BLUE = 'text-[#007AFF] dark:text-[#0A84FF]'
+type ThemeMode = 'light' | 'dark' | 'system'
 
 // Returns today's key, or null on a day with no classes (Friday).
 function getToday(date = new Date()): (typeof DAYS)[number] | null {
@@ -120,12 +121,14 @@ export default function Page() {
   }, [auth.user])
   const [now, setNow] = useState<Date | null>(null)
   const [dark, setDark] = useState(true)
+  const [themeMode, setThemeMode] = useState<ThemeMode>('dark')
   const [isMounted, setIsMounted] = useState(false)
   const [selectedSection, setSelectedSection] = useState('69_P')
   const [personalRoutine, setPersonalRoutine] = useState<PersonalRoutine | null>(null)
   const [personalRoutineStatus, setPersonalRoutineStatus] = useState<'idle' | 'loading' | 'ready' | 'missing' | 'error'>('idle')
   const [personalRoutineRetry, setPersonalRoutineRetry] = useState(0)
   const classListRef = useRef<HTMLDivElement>(null)
+  const touchStart = useRef<{ x: number; y: number } | null>(null)
   const personal = auth.email?.trim().toLowerCase() === PERSONAL_OWNER_EMAIL
   const personalClasses = personal ? personalRoutine?.routine ?? EMPTY_ROUTINE : EMPTY_ROUTINE
   const skippedCourses = personal ? personalRoutine?.skipped_courses ?? EMPTY_LIST : EMPTY_LIST
@@ -145,9 +148,15 @@ export default function Page() {
     setTabDay(initialDay)
 
     // Restore dark mode (defaults to dark).
+    const savedTheme = window.localStorage.getItem('routine-theme') as ThemeMode | null
     const savedDark = window.localStorage.getItem('routine-dark')
-    const startDark = savedDark ? savedDark === '1' : true
+    const startTheme: ThemeMode = savedTheme === 'light' || savedTheme === 'dark' || savedTheme === 'system'
+      ? savedTheme
+      : savedDark === '0' ? 'light' : 'dark'
+    const startDark = startTheme === 'dark' || (startTheme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)
+    setThemeMode(startTheme)
     setDark(startDark)
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', startDark ? '#000000' : '#F2F2F7')
 
     const savedSection = window.localStorage.getItem('routine-section')
     const initialSection = savedSection && SECTIONS.includes(savedSection) ? savedSection : '69_P'
@@ -168,9 +177,10 @@ export default function Page() {
     }
     clockTimer = window.setTimeout(tick, 60000 - (Date.now() % 60000) + 50)
 
-    // Trigger splash fade out at 1.4s, completely unmount at 1.9s
-    const fadeTimer = window.setTimeout(() => setIsSplashFading(true), 1400)
-    const exitTimer = window.setTimeout(() => setShowSplash(false), 1900)
+    // Keep launch branding brief so the routine appears immediately after startup.
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    const fadeTimer = window.setTimeout(() => setIsSplashFading(true), reducedMotion ? 80 : 420)
+    const exitTimer = window.setTimeout(() => setShowSplash(false), reducedMotion ? 100 : 670)
 
     return () => {
       window.clearTimeout(clockTimer)
@@ -227,13 +237,27 @@ export default function Page() {
     return () => { active = false }
   }, [auth.email, personalRoutineRetry])
 
-  const toggleDark = () => {
-    const next = !dark
-    setDark(next)
-    window.localStorage.setItem('routine-dark', next ? '1' : '0')
+  const chooseThemeMode = (mode: ThemeMode) => {
+    const nextDark = mode === 'dark' || (mode === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)
+    setThemeMode(mode)
+    setDark(nextDark)
+    window.localStorage.setItem('routine-theme', mode)
+    window.localStorage.setItem('routine-dark', nextDark ? '1' : '0')
     // Keep the browser UI/status bar color in sync with the scene.
-    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', next ? '#000000' : '#F2F2F7')
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', nextDark ? '#000000' : '#F2F2F7')
   }
+
+  useEffect(() => {
+    if (themeMode !== 'system') return
+    const media = window.matchMedia('(prefers-color-scheme: dark)')
+    const update = () => {
+      setDark(media.matches)
+      window.localStorage.setItem('routine-dark', media.matches ? '1' : '0')
+      document.querySelector('meta[name="theme-color"]')?.setAttribute('content', media.matches ? '#000000' : '#F2F2F7')
+    }
+    media.addEventListener('change', update)
+    return () => media.removeEventListener('change', update)
+  }, [themeMode])
 
   const selectDay = (day: (typeof DAYS)[number]) => {
     if (day === tabDay) return
@@ -469,7 +493,7 @@ export default function Page() {
 
       {/* Main Routine App View */}
       <main className={dark ? 'dark ios-scene min-h-screen text-slate-900 dark:text-slate-100' : 'ios-scene min-h-screen text-slate-900'}>
-        <div className="relative z-10 mx-auto min-h-screen max-w-3xl px-4 pb-32 pt-6 sm:px-6">
+        <div className="relative z-10 mx-auto min-h-screen max-w-3xl px-4 pb-32 pt-[calc(24px+env(safe-area-inset-top))] sm:px-6">
 
           {/* iOS Large Title header */}
           <header className="flex items-center justify-between gap-2">
@@ -494,7 +518,7 @@ export default function Page() {
                     ? `Reminders, ${pending.length} pending`
                     : 'Add a quiz, assignment or presentation'
                 }
-                className={`panel relative flex size-10 items-center justify-center rounded-full text-slate-600 transition dark:text-slate-300 sm:size-11 ${FOCUS_RING}`}
+                className={`ios-pressable panel relative flex size-10 items-center justify-center rounded-full text-slate-600 dark:text-slate-300 sm:size-11 ${FOCUS_RING}`}
               >
                 <Plus className="size-5" />
                 {isMounted && pending.length > 0 && (
@@ -510,7 +534,7 @@ export default function Page() {
                 type="button"
                 onClick={() => setFeaturesOpen(true)}
                 aria-label="Routine settings and tools"
-                className={`panel flex size-10 items-center justify-center rounded-full text-slate-600 transition dark:text-slate-300 sm:size-11 ${FOCUS_RING}`}
+                className={`ios-pressable panel flex size-10 items-center justify-center rounded-full text-slate-600 dark:text-slate-300 sm:size-11 ${FOCUS_RING}`}
               >
                 <Settings2 className="size-5" />
               </button>
@@ -518,7 +542,7 @@ export default function Page() {
                 type="button"
                 onClick={() => openAccount()}
                 aria-label={auth.user ? 'Your profile' : 'Sign in'}
-                className={`panel flex size-10 items-center justify-center overflow-hidden rounded-full text-slate-600 transition dark:text-slate-300 sm:size-11 ${FOCUS_RING}`}
+                className={`ios-pressable panel flex size-10 items-center justify-center overflow-hidden rounded-full text-slate-600 dark:text-slate-300 sm:size-11 ${FOCUS_RING}`}
               >
                 {auth.loading ? (
                   <span aria-hidden="true" className="size-5 animate-pulse rounded-full bg-slate-300/60 dark:bg-white/15" />
@@ -703,7 +727,29 @@ export default function Page() {
               </div>
             )}
 
-            <div ref={classListRef} tabIndex={-1} className="flex scroll-mt-20 flex-col gap-2.5 outline-none">
+            <div
+              key={selectedDay}
+              ref={classListRef}
+              tabIndex={-1}
+              className="day-content-enter flex scroll-mt-20 flex-col gap-2.5 outline-none"
+              style={{ touchAction: 'pan-y' }}
+              onTouchStart={(event) => {
+                const touch = event.changedTouches[0]
+                if (touch) touchStart.current = { x: touch.clientX, y: touch.clientY }
+              }}
+              onTouchEnd={(event) => {
+                const start = touchStart.current
+                const touch = event.changedTouches[0]
+                touchStart.current = null
+                if (!start || !touch) return
+                const dx = touch.clientX - start.x
+                const dy = touch.clientY - start.y
+                if (Math.abs(dx) < 56 || Math.abs(dx) < Math.abs(dy) * 1.25) return
+                const nextIndex = Math.min(DAYS.length - 1, Math.max(0, DAYS.indexOf(tabDay) + (dx < 0 ? 1 : -1)))
+                if (nextIndex !== DAYS.indexOf(tabDay)) selectDay(DAYS[nextIndex])
+              }}
+              onTouchCancel={() => { touchStart.current = null }}
+            >
               {selectedHoliday ? (
                 <article className="panel flex items-center gap-3 rounded-2xl p-4">
                   <CalendarDays className="size-6 shrink-0 text-[#007AFF] dark:text-[#0A84FF]" />
@@ -807,7 +853,7 @@ export default function Page() {
 
         {/* iOS-style floating day tab bar */}
         <nav aria-label="Select a day" className="fixed inset-x-0 bottom-0 z-40">
-          <div className="mx-auto max-w-3xl px-4 pb-4">
+          <div className="mx-auto max-w-3xl px-4 pb-[calc(12px+env(safe-area-inset-bottom))]">
             <div className="ios-tabbar relative flex rounded-3xl px-2 py-2">
               {/* Sliding highlight: moves with a GPU transform instead of re-painting each tab */}
               <span
@@ -830,7 +876,7 @@ export default function Page() {
                     onClick={() => selectDay(day)}
                     aria-current={isToday ? 'date' : undefined}
                     aria-pressed={active}
-                    className={`relative z-10 flex flex-1 flex-col items-center gap-0.5 rounded-2xl py-1.5 ${FOCUS_RING}`}
+                    className={`ios-pressable relative z-10 flex min-h-11 flex-1 flex-col items-center gap-0.5 rounded-2xl py-1.5 ${FOCUS_RING}`}
                   >
                     <span className={`text-[10px] font-semibold uppercase tracking-wide transition-colors duration-200 ${active ? IOS_BLUE : 'text-slate-400 dark:text-slate-500'}`}>
                       {day}
@@ -859,8 +905,8 @@ export default function Page() {
           onClose={() => setAccountOpen(false)}
           auth={auth}
           reason={accountReason}
-          dark={dark}
-          onToggleDark={toggleDark}
+          themeMode={themeMode}
+          onThemeModeChange={chooseThemeMode}
           section={selectedSection}
           onChooseSection={chooseSection}
         />
