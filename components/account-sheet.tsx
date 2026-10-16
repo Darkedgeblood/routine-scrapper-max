@@ -440,18 +440,15 @@ function SectionPanel({ section, onChoose }: { section: string; onChoose: (secti
         <span className="text-[12px] font-medium text-slate-500 dark:text-slate-400">Current section</span>
         <span className="text-[15px] font-semibold tabular-nums">{section}</span>
       </div>
-      <div className="settings-segmented">
+      <div className="settings-group settings-section-grid p-3" role="group" aria-label="Choose your section">
         {SECTIONS.map((s) => (
           <button
             key={s}
             type="button"
             onClick={() => onChoose(s)}
             aria-pressed={section === s}
-            className={`ios-pressable px-1 py-2 text-[13px] tabular-nums ${
-              section === s
-                ? 'ios-active'
-                : 'text-slate-600 hover:bg-black/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007AFF]/60 dark:text-slate-300 dark:hover:bg-white/10'
-            }`}
+            aria-label={`Select section ${s}`}
+            className={`ios-pressable settings-section-tile ${section === s ? 'is-selected' : ''}`}
           >
             {s}
           </button>
