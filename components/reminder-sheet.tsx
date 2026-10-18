@@ -115,7 +115,7 @@ export function ReminderSheet({
   onToggle: (id: string) => void | Promise<void>
   onRemove: (id: string) => void | Promise<void>
 }) {
-  const sheet = useSheetMotion(open, onClose)
+  const sheet = useSheetMotion(open, onClose, 'slide-down')
   const today = now ?? new Date()
   const [type, setType] = useState<ReminderType>('quiz')
   const [course, setCourse] = useState('')
@@ -127,7 +127,7 @@ export function ReminderSheet({
   useEffect(() => {
     if (!open) return
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
+      if (e.key === 'Escape') sheet.close()
     }
     window.addEventListener('keydown', onKey)
     const previous = document.body.style.overflow
@@ -136,7 +136,7 @@ export function ReminderSheet({
       window.removeEventListener('keydown', onKey)
       document.body.style.overflow = previous
     }
-  }, [open, onClose])
+  }, [open, sheet.close])
 
   if (!sheet.mounted) return null
 
@@ -154,8 +154,8 @@ export function ReminderSheet({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center" data-state={sheet.phase} role="presentation">
-          <button type="button" aria-label="Close reminders" className="sheet-backdrop absolute inset-0 bg-black/50" onClick={onClose} />
+    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center" data-state={sheet.phase} data-exit={sheet.exit} role="presentation">
+          <button type="button" aria-label="Close reminders" className="sheet-backdrop absolute inset-0 bg-black/50" onClick={sheet.close} />
       <div
         ref={sheet.panelRef}
         role="dialog"
@@ -170,7 +170,7 @@ export function ReminderSheet({
           <h2 className="text-[22px] font-bold tracking-tight">Reminders</h2>
           <button
             type="button"
-            onClick={onClose}
+            onClick={sheet.close}
             aria-label="Close"
             className="ios-pressable flex size-11 items-center justify-center rounded-full bg-black/5 text-slate-500 hover:bg-black/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007AFF]/60 dark:bg-white/10 dark:text-slate-300 dark:hover:bg-white/15"
           >

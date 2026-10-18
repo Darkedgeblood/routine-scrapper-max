@@ -391,8 +391,10 @@
   backface-visibility: hidden;
   will-change: transform, opacity;
 }
+[data-exit="slide-down"] > .sheet-surface { transition: transform 280ms cubic-bezier(0.22, 1, 0.36, 1), opacity 180ms ease; }
 [data-state="opening"] > .sheet-surface,
 [data-state="closing"] > .sheet-surface { transform: translate3d(0, 24px, 0); opacity: 0.96; }
+[data-exit="slide-down"][data-state="closing"] > .sheet-surface { transform: translate3d(0, 100%, 0); opacity: 1; }
 .sheet-backdrop { z-index: 0; border: 0; opacity: 1; transition: opacity 180ms ease; }
 [data-state="opening"] > .sheet-backdrop,
 [data-state="closing"] > .sheet-backdrop { opacity: 0; }
