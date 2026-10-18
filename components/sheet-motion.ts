@@ -1,11 +1,12 @@
 'use client'
 
-import { useEffect, useRef, useState, type PointerEvent } from 'react'
+import { useCallback, useEffect, useRef, useState, type PointerEvent } from 'react'
 
 type SheetPhase = 'opening' | 'open' | 'closing'
+type SheetExit = 'profile' | 'slide-down'
 
 /** Keeps a bottom sheet mounted for its exit transition and supports a native-style drag handle. */
-export function useSheetMotion(open: boolean, onClose: () => void) {
+export function useSheetMotion(open: boolean, onClose: () => void, exit: SheetExit = 'profile') {
   const [mounted, setMounted] = useState(open)
   const [phase, setPhase] = useState<SheetPhase>(open ? 'open' : 'opening')
   const panelRef = useRef<HTMLDivElement>(null)
@@ -14,7 +15,7 @@ export function useSheetMotion(open: boolean, onClose: () => void) {
   useEffect(() => {
     if (!open) {
       setPhase('closing')
-      const timer = window.setTimeout(() => setMounted(false), 220)
+      const timer = window.setTimeout(() => setMounted(false), exit === 'slide-down' ? 280 : 220)
       return () => window.clearTimeout(timer)
     }
 
@@ -22,7 +23,12 @@ export function useSheetMotion(open: boolean, onClose: () => void) {
     setPhase('opening')
     const frame = window.requestAnimationFrame(() => setPhase('open'))
     return () => window.cancelAnimationFrame(frame)
-  }, [open])
+  }, [exit, open])
+
+  const close = useCallback(() => {
+    setPhase('closing')
+    onClose()
+  }, [onClose])
 
   const onPointerDown = (event: PointerEvent<HTMLDivElement>) => {
     if (event.pointerType === 'mouse' && event.button !== 0) return
@@ -42,9 +48,21 @@ export function useSheetMotion(open: boolean, onClose: () => void) {
     const start = dragStart.current
     if (!start || start.pointerId !== event.pointerId) return
     dragStart.current = null
-    if (panelRef.current) {
-      panelRef.current.style.removeProperty('transition')
-      panelRef.current.style.removeProperty('transform')
+    const panel = panelRef.current
+    if (dismiss && exit === 'slide-down') {
+      if (panel) {
+        const distance = Math.max(0, event.clientY - start.y)
+        panel.style.transition = 'transform 280ms cubic-bezier(0.22, 1, 0.36, 1)'
+        panel.style.transform = `translate3d(0, max(100%, ${distance}px), 0)`
+      }
+      setPhase('closing')
+      onClose()
+      return
+    }
+
+    if (panel) {
+      panel.style.removeProperty('transition')
+      panel.style.removeProperty('transform')
     }
     if (dismiss) onClose()
   }
@@ -52,6 +70,8 @@ export function useSheetMotion(open: boolean, onClose: () => void) {
   return {
     mounted,
     phase,
+    exit,
+    close,
     panelRef,
     dragHandleProps: {
       onPointerDown,
