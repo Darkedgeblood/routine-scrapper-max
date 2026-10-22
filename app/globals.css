@@ -384,21 +384,21 @@
   box-shadow: 0 2px 6px rgba(0, 122, 255, 0.24);
 }
 .settings-section-tile:focus-visible { outline: 2px solid rgba(0, 122, 255, 0.6); outline-offset: 2px; }
+/* Sheets: transform-only motion (GPU-composited), no opacity animation on the big panel. */
 .sheet-surface {
+  z-index: 1;
   transform: translate3d(0, 0, 0);
-  opacity: 1;
-  transition: transform 220ms cubic-bezier(0.32, 0.72, 0, 1), opacity 180ms ease;
+  transition: transform 240ms cubic-bezier(0.32, 0.72, 0, 1);
   backface-visibility: hidden;
-  will-change: transform, opacity;
+  will-change: transform;
 }
-[data-exit="slide-down"] > .sheet-surface { transition: transform 280ms cubic-bezier(0.22, 1, 0.36, 1), opacity 180ms ease; }
-[data-state="opening"] > .sheet-surface,
-[data-state="closing"] > .sheet-surface { transform: translate3d(0, 24px, 0); opacity: 0.96; }
-[data-exit="slide-down"][data-state="closing"] > .sheet-surface { transform: translate3d(0, 100%, 0); opacity: 1; }
+[data-state="opening"] > .sheet-surface { transform: translate3d(0, 24px, 0); }
+[data-state="closing"] > .sheet-surface,
+[data-closing="true"] > .sheet-surface { transform: translate3d(0, 100%, 0); }
 .sheet-backdrop { z-index: 0; border: 0; opacity: 1; transition: opacity 180ms ease; }
 [data-state="opening"] > .sheet-backdrop,
-[data-state="closing"] > .sheet-backdrop { opacity: 0; }
-.sheet-surface { z-index: 1; }
+[data-state="closing"] > .sheet-backdrop,
+[data-closing="true"] > .sheet-backdrop { opacity: 0; }
 .sheet-drag-handle { touch-action: none; cursor: grab; }
 .sheet-drag-handle:active { cursor: grabbing; }
 .sheet-grabber { width: 36px; height: 5px; border-radius: 999px; background: rgba(60, 60, 67, 0.28); }

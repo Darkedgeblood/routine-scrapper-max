@@ -49,7 +49,7 @@ export function FeatureCenterSheet({
   notificationStatus: string | null
   onExportCalendar: (weeks: number) => void
 }) {
-  const sheet = useSheetMotion(open, onClose, 'slide-down')
+  const sheet = useSheetMotion(open, onClose)
   const [weeks, setWeeks] = useState(16)
   const [feedbackType, setFeedbackType] = useState('Routine correction')
   const [feedbackClass, setFeedbackClass] = useState('')
@@ -102,7 +102,7 @@ export function FeatureCenterSheet({
   const distinctClasses = [...new Map(classes.map((item) => [`${item.courseCode}|${item.subSection ?? ''}`, item])).values()]
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center" data-state={sheet.phase} data-exit={sheet.exit} role="presentation">
+    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center" ref={sheet.rootRef} data-state={sheet.phase} role="presentation">
       <button type="button" aria-label="Close features" className="sheet-backdrop absolute inset-0 bg-black/50" onClick={sheet.close} />
       <div ref={sheet.panelRef} role="dialog" aria-modal="true" aria-label="Schedule settings and tools" className="sheet-surface settings-sheet relative flex max-h-[92dvh] w-full max-w-md flex-col rounded-t-[28px] sm:rounded-3xl">
         <div className="sheet-drag-handle flex h-7 shrink-0 items-center justify-center sm:hidden" {...sheet.dragHandleProps} aria-hidden="true"><span className="sheet-grabber" /></div>

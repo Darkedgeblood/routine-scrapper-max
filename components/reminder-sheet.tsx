@@ -115,7 +115,7 @@ export function ReminderSheet({
   onToggle: (id: string) => void | Promise<void>
   onRemove: (id: string) => void | Promise<void>
 }) {
-  const sheet = useSheetMotion(open, onClose, 'slide-down')
+  const sheet = useSheetMotion(open, onClose)
   const today = now ?? new Date()
   const [type, setType] = useState<ReminderType>('quiz')
   const [course, setCourse] = useState('')
@@ -154,7 +154,7 @@ export function ReminderSheet({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center" data-state={sheet.phase} data-exit={sheet.exit} role="presentation">
+    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center" ref={sheet.rootRef} data-state={sheet.phase} role="presentation">
           <button type="button" aria-label="Close reminders" className="sheet-backdrop absolute inset-0 bg-black/50" onClick={sheet.close} />
       <div
         ref={sheet.panelRef}
