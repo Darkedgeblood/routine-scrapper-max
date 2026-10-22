@@ -36,6 +36,9 @@ jobs:
       - name: Install Dependencies
         run: pnpm install --allow-build=sharp
 
+      - name: Run application tests
+        run: pnpm test
+
       - name: Setup JDK 21
         uses: actions/setup-java@v4
         with:
