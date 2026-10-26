@@ -1,10 +1,12 @@
 'use client'
 
-import { Fragment, useRef, type TouchEvent } from 'react'
+import { Fragment, memo, useRef, type TouchEvent } from 'react'
 import { ArrowDown, CalendarDays, Coffee, MapPin, Users } from 'lucide-react'
 
 import { DAYS, FULL_DAYS, TEACHERS, type RoutineItem } from '@/lib/routine-data'
 import type { BangladeshNationalHoliday } from '@/lib/bangladesh-holidays'
+import type { MidtermExam } from '@/lib/exam-routine'
+import { parseDateKey } from '@/lib/reminders'
 import { isInactive, isOtherLabGroup, isSkippedCourse, teacherLabel, type RoutineDay } from '@/lib/routine-view'
 
 const FOCUS_RING = 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007AFF]/60 dark:focus-visible:ring-[#0A84FF]/60'
@@ -18,6 +20,8 @@ type ClassScheduleProps = {
   sectionHasData: boolean
   personal: boolean
   selectedHoliday: BangladeshNationalHoliday | null
+  midtermExams: MidtermExam[]
+  upcomingMidtermExams: MidtermExam[]
   visibleDayClasses: RoutineItem[]
   skippedCourses: string[]
   skippedLabs: string[]
@@ -25,7 +29,7 @@ type ClassScheduleProps = {
   ongoingClass: RoutineItem | undefined
 }
 
-export function ClassSchedule({
+export const ClassSchedule = memo(function ClassSchedule({
   selectedDay,
   tabDay,
   onSelectDay,
@@ -34,6 +38,8 @@ export function ClassSchedule({
   sectionHasData,
   personal,
   selectedHoliday,
+  midtermExams,
+  upcomingMidtermExams,
   visibleDayClasses,
   skippedCourses,
   skippedLabs,
@@ -90,6 +96,23 @@ export function ClassSchedule({
         onTouchEnd={finishSwipe}
         onTouchCancel={() => { touchStart.current = null }}
       >
+        {midtermExams.map((exam) => (
+          <article key={`${exam.date}-${exam.courseCode}`} className="panel flex items-stretch gap-3.5 rounded-2xl p-4 sm:gap-5">
+            <div className="flex w-[84px] shrink-0 flex-col justify-center border-r border-slate-200 pr-3 dark:border-white/10 sm:w-[96px] sm:pr-4">
+              <span className="whitespace-nowrap text-[12px] font-semibold tabular-nums sm:text-[14px]">{exam.startTime}</span>
+              <span className="my-1 h-px w-3 bg-slate-300 dark:bg-slate-600" />
+              <span className="whitespace-nowrap text-[11px] tabular-nums text-slate-400 dark:text-slate-500 sm:text-[12px]">{exam.endTime}</span>
+            </div>
+            <div className="min-w-0 flex-1 self-center">
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 className="text-[16px] font-semibold">{exam.courseCode}</h3>
+                <span className="rounded-full bg-[#007AFF]/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-[#007AFF] dark:bg-[#0A84FF]/15 dark:text-[#0A84FF]">Midterm exam</span>
+              </div>
+              <p className="mt-1 text-[14px] text-slate-500 dark:text-slate-400">{exam.courseTitle}</p>
+              <p className="mt-2 text-[12px] font-medium text-slate-400 dark:text-slate-500">Batch 69</p>
+            </div>
+          </article>
+        ))}
         {selectedHoliday ? (
           <article className="panel flex items-center gap-3 rounded-2xl p-4">
             <CalendarDays className="size-6 shrink-0 text-[#007AFF] dark:text-[#0A84FF]" />
@@ -154,6 +177,26 @@ export function ClassSchedule({
           )
         })}
       </div>
+
+      {upcomingMidtermExams.length > 0 && (
+        <section className="mt-5" aria-label="Upcoming midterm exams">
+          <h2 className="mb-2 px-1 text-[12px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Upcoming midterm exams</h2>
+          <div className="flex flex-col gap-2">
+            {upcomingMidtermExams.map((exam) => (
+              <article key={`${exam.date}-${exam.courseCode}`} className="panel flex items-center justify-between gap-3 rounded-2xl p-3.5">
+                <div className="min-w-0">
+                  <h3 className="truncate text-[14px] font-semibold">{exam.courseCode} · {exam.courseTitle}</h3>
+                  <p className="mt-1 text-[12px] text-slate-500 dark:text-slate-400">
+                    {parseDateKey(exam.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                    {' · '}{exam.startTime}–{exam.endTime}
+                  </p>
+                </div>
+                <span className="shrink-0 rounded-full bg-[#007AFF]/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-[#007AFF] dark:bg-[#0A84FF]/15 dark:text-[#0A84FF]">Batch 69</span>
+              </article>
+            ))}
+          </div>
+        </section>
+      )}
     </section>
   )
-}
+})

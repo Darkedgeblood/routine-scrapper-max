@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { memo, useEffect, useState } from 'react'
 import { Check, ChevronDown, ClipboardList, FileText, Presentation, Trash2, X } from 'lucide-react'
 
 import { daysFromToday, parseDateKey, relativeLabel, toDateKey, type Reminder, type ReminderType } from '@/lib/reminders'
@@ -94,7 +94,7 @@ export function ReminderRow({
   )
 }
 
-export function ReminderSheet({
+export const ReminderSheet = memo(function ReminderSheet({
   open,
   onClose,
   reminders,
@@ -304,5 +304,5 @@ export function ReminderSheet({
       </div>
     </div>
   )
-}
+})
 

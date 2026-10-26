@@ -1,11 +1,12 @@
 'use client'
 
-import { useAuth } from '@/lib/auth'
+import { memo } from 'react'
+
 import { ReminderRow, TYPE_META } from '@/components/reminder-sheet'
 import type { Reminder } from '@/lib/reminders'
 
 type DashboardRemindersProps = {
-  auth: ReturnType<typeof useAuth>
+  isSignedIn: boolean
   dayReminders: Reminder[]
   dayDoneCount: number
   isViewingToday: boolean
@@ -14,7 +15,7 @@ type DashboardRemindersProps = {
   onToggle: (id: string) => void | Promise<void>
 }
 
-export function DashboardReminders({ auth, dayReminders, dayDoneCount, isViewingToday, now, onOpenAccount, onToggle }: DashboardRemindersProps) {
+export const DashboardReminders = memo(function DashboardReminders({ isSignedIn, dayReminders, dayDoneCount, isViewingToday, now, onOpenAccount, onToggle }: DashboardRemindersProps) {
   return (
     <section className="panel mt-3 rounded-3xl p-4">
       <div className="flex items-center gap-3 text-slate-400 dark:text-slate-500" aria-label="Reminder types">
@@ -23,7 +24,7 @@ export function DashboardReminders({ auth, dayReminders, dayDoneCount, isViewing
           return <Icon key={type} aria-hidden="true" className="size-4" />
         })}
       </div>
-      {!auth.user ? (
+      {!isSignedIn ? (
         <div className="mt-3 flex items-center justify-between gap-3">
           <p className="text-[14px] text-slate-400 dark:text-slate-500">Sign in to sync your reminders.</p>
           <button type="button" onClick={onOpenAccount} className="ios-active shrink-0 rounded-full px-4 py-1.5 text-[13px] font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007AFF]/60 dark:focus-visible:ring-[#0A84FF]/60">Sign in</button>
@@ -43,4 +44,4 @@ export function DashboardReminders({ auth, dayReminders, dayDoneCount, isViewing
       )}
     </section>
   )
-}
+})

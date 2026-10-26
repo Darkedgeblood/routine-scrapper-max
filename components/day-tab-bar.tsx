@@ -1,8 +1,10 @@
 'use client'
 
+import { memo } from 'react'
+
 import { DAYS } from '@/lib/routine-data'
 import { toDateKey, type Reminder } from '@/lib/reminders'
-import { getToday, type RoutineDay } from '@/lib/routine-view'
+import type { RoutineDay } from '@/lib/routine-view'
 
 const IOS_BLUE = 'text-[#007AFF] dark:text-[#0A84FF]'
 
@@ -12,11 +14,10 @@ type DayTabBarProps = {
   weekDates: Date[] | null
   weekCounts: Record<RoutineDay, number>
   pendingByDate: Record<string, Reminder[]>
-  isMounted: boolean
-  now: Date | null
+  todayDay: RoutineDay | null
 }
 
-export function DayTabBar({ tabDay, onSelectDay, weekDates, weekCounts, pendingByDate, isMounted, now }: DayTabBarProps) {
+export const DayTabBar = memo(function DayTabBar({ tabDay, onSelectDay, weekDates, weekCounts, pendingByDate, todayDay }: DayTabBarProps) {
   return (
     <nav aria-label="Select a day" className="fixed inset-x-0 bottom-0 z-40">
       <div className="mx-auto max-w-3xl px-4 pb-[calc(12px+env(safe-area-inset-bottom))]">
@@ -26,7 +27,7 @@ export function DayTabBar({ tabDay, onSelectDay, weekDates, weekCounts, pendingB
             transform: `translateX(${DAYS.indexOf(tabDay) * 100}%)`,
           }} />
           {DAYS.map((day, index) => {
-            const isToday = isMounted && now !== null && day === getToday(now)
+            const isToday = day === todayDay
             const active = tabDay === day
             const count = weekCounts[day]
             const hasDue = weekDates ? (pendingByDate[toDateKey(weekDates[index])]?.length ?? 0) > 0 : false
@@ -44,4 +45,4 @@ export function DayTabBar({ tabDay, onSelectDay, weekDates, weekCounts, pendingB
       </div>
     </nav>
   )
-}
+})

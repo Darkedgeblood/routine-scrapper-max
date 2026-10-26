@@ -2,6 +2,7 @@ import { App } from '@capacitor/app'
 import { Browser } from '@capacitor/browser'
 import { Capacitor } from '@capacitor/core'
 import { LocalNotifications } from '@capacitor/local-notifications'
+import { formatApkVersion } from '@/lib/app-version'
 
 const UPDATE_NOTIFICATION_ID = 9_100_001
 const UPDATE_CHANNEL_ID = 'app-updates'
@@ -45,13 +46,14 @@ async function notifyAboutUpdate(update: AppUpdate) {
   if (permission.display !== 'granted') return
 
   await LocalNotifications.createChannel({ id: UPDATE_CHANNEL_ID, name: 'App updates', importance: 4 })
+  const version = formatApkVersion(update.build)
   await LocalNotifications.schedule({
     notifications: [{
       id: UPDATE_NOTIFICATION_ID,
-      title: update.critical ? 'Important app update available' : 'Routine Scrapper Max update available',
+      title: update.critical ? `Important update · v${version}` : `App update · v${version}`,
       body: update.critical
-        ? 'An important update is ready. Tap to download and install it.'
-        : 'A new version is ready. Tap to download and install it.',
+        ? `Important version ${version} is ready. Tap to download and install it.`
+        : `Version ${version} is ready. Tap to download and install it.`,
       schedule: { at: new Date(Date.now() + 2_000), allowWhileIdle: true },
       channelId: UPDATE_CHANNEL_ID,
       extra: { type: 'app-update', apkUrl: update.apkUrl },

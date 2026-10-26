@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { memo, useEffect, useMemo, useState } from 'react'
 import { Bell, CalendarDays, ChevronDown, CircleAlert, MessageSquareWarning, Share2, X } from 'lucide-react'
 
 import type { ScheduleNotice } from '@/lib/schedule-changes'
@@ -10,7 +10,7 @@ import { useSheetMotion } from '@/components/sheet-motion'
 const FOCUS = 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007AFF]/60 dark:focus-visible:ring-[#0A84FF]/60'
 const FIELD = 'settings-field w-full text-[14px] outline-none'
 
-export function FeatureCenterSheet({
+export const FeatureCenterSheet = memo(function FeatureCenterSheet({
   open,
   onClose,
   section,
@@ -68,6 +68,11 @@ export function FeatureCenterSheet({
     }
   }, [open, sheet.close])
 
+  const distinctClasses = useMemo(
+    () => [...new Map(classes.map((item) => [`${item.courseCode}|${item.subSection ?? ''}`, item])).values()],
+    [classes]
+  )
+
   if (!sheet.mounted) return null
 
   const sendFeedback = async (event: React.FormEvent) => {
@@ -98,8 +103,6 @@ export function FeatureCenterSheet({
       setFeedbackStatus('Could not open sharing or copy feedback on this browser.')
     }
   }
-
-  const distinctClasses = [...new Map(classes.map((item) => [`${item.courseCode}|${item.subSection ?? ''}`, item])).values()]
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center" ref={sheet.rootRef} data-state={sheet.phase} role="presentation">
@@ -243,5 +246,5 @@ export function FeatureCenterSheet({
       </div>
     </div>
   )
-}
+})
 
