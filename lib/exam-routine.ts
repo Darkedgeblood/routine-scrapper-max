@@ -70,14 +70,3 @@ export function getBatch69MidtermExams(date: string | null, section: string): Mi
   if (!date || !isBatch69Section(section)) return []
   return BATCH_69_MIDTERM_EXAMS.filter((exam) => exam.date === date)
 }
-
-export function getUpcomingBatch69MidtermExams(
-  today: string | null,
-  excludedDate: string | null,
-  section: string
-): MidtermExam[] {
-  if (!isBatch69Section(section)) return []
-  return BATCH_69_MIDTERM_EXAMS.filter(
-    (exam) => (!today || exam.date >= today) && exam.date !== excludedDate
-  )
-}
