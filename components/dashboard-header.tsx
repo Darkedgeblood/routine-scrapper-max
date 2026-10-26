@@ -6,6 +6,7 @@ import { Avatar } from '@/components/account-sheet'
 import type { PersonalRoutineStatus } from '@/hooks/use-personal-routine'
 import type { useAuth } from '@/lib/auth'
 import type { AppUpdate } from '@/lib/app-updates'
+import { formatApkVersion } from '@/lib/app-version'
 import type { ScheduleNotice } from '@/lib/schedule-changes'
 
 const FOCUS_RING = 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007AFF]/60 dark:focus-visible:ring-[#0A84FF]/60'
@@ -114,7 +115,7 @@ export function DashboardHeader({
           <Download className="size-5 shrink-0 text-[#007AFF] dark:text-[#0A84FF]" />
           <div className="min-w-0 flex-1">
             <p className="text-[13px] font-semibold">{appUpdate.critical ? 'Important app update available' : 'App update available'}</p>
-            <p className="text-[12px] text-slate-500 dark:text-slate-400">Tap to download version {appUpdate.build}.</p>
+            <p className="text-[12px] text-slate-500 dark:text-slate-400">Tap to download version {formatApkVersion(appUpdate.build)}.</p>
           </div>
           <button type="button" onClick={() => onStartApkUpdate(appUpdate.apkUrl)} className={`shrink-0 rounded-full bg-[#007AFF] px-3 py-2 text-[12px] font-semibold text-white dark:bg-[#0A84FF] ${FOCUS_RING}`}>Update</button>
         </section>

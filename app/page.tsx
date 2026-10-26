@@ -1,6 +1,6 @@
 'use client'
 
-import { startTransition, useEffect, useMemo, useState } from 'react'
+import { startTransition, useCallback, useEffect, useMemo, useState } from 'react'
 
 import {
   DAYS,
@@ -9,7 +9,7 @@ import {
   SECTIONS,
 } from '@/lib/routine-data'
 import { useAuth } from '@/lib/auth'
-import { toDateKey, useReminders } from '@/lib/reminders'
+import { parseDateKey, toDateKey, useReminders } from '@/lib/reminders'
 import { AccountSheet } from '@/components/account-sheet'
 import { ReminderSheet, type CourseOption } from '@/components/reminder-sheet'
 import { FeatureCenterSheet } from '@/components/feature-center-sheet'
@@ -25,6 +25,7 @@ import { clearScheduledNotifications, requestNotificationPermission, sendTestNot
 import { BANGLADESH_NATIONAL_HOLIDAYS, getBangladeshNationalHoliday } from '@/lib/bangladesh-holidays'
 import { checkForScheduleChanges, dismissScheduleNotice, type ScheduleNotice } from '@/lib/schedule-changes'
 import { monitorAppUpdates, startApkUpdate, type AppUpdate } from '@/lib/app-updates'
+import { getBatch69MidtermExams, getUpcomingBatch69MidtermExams } from '@/lib/exam-routine'
 import { usePersonalRoutine } from '@/hooks/use-personal-routine'
 import { formatCountdown, getToday, getWeekDates, isInactive, type RoutineDay } from '@/lib/routine-view'
 
@@ -51,10 +52,10 @@ export default function Page() {
   const [notificationStatus, setNotificationStatus] = useState<string | null>(null)
   const [accountReason, setAccountReason] = useState<string | undefined>(undefined)
 
-  const openAccount = (reason?: string) => {
+  const openAccount = useCallback((reason?: string) => {
     setAccountReason(reason)
     setAccountOpen(true)
-  }
+  }, [])
 
   // A password-reset email link opens the app with a recovery session: show the new-password form.
   useEffect(() => {
@@ -156,24 +157,24 @@ export default function Page() {
     return () => media.removeEventListener('change', update)
   }, [themeMode])
 
-  const selectDay = (day: (typeof DAYS)[number]) => {
+  const selectDay = useCallback((day: RoutineDay) => {
     if (day === tabDay) return
     setTabDay(day) // highlight moves right away
     startTransition(() => setSelectedDay(day)) // the class list catches up without blocking it
     window.setTimeout(() => window.localStorage.setItem('routine-day', day), 0)
-  }
+  }, [tabDay])
 
-  const chooseSection = (section: string) => {
+  const chooseSection = useCallback((section: string) => {
     if (!SECTIONS.includes(section)) return
     setSelectedSection(section)
     setLabGroup(window.localStorage.getItem(`routine-lab-group:${section}`) ?? 'all')
     window.localStorage.setItem('routine-section', section)
-  }
+  }, [])
 
-  const chooseLabGroup = (group: string) => {
+  const chooseLabGroup = useCallback((group: string) => {
     setLabGroup(group)
     window.localStorage.setItem(`routine-lab-group:${selectedSection}`, group)
-  }
+  }, [selectedSection])
 
   const labGroups = useMemo(() => [...new Set(
     ROUTINE_DATA
@@ -186,7 +187,7 @@ export default function Page() {
     [selectedSection]
   )
 
-  const enableNotifications = async () => {
+  const enableNotifications = useCallback(async () => {
     setNotificationError(null)
     setNotificationStatus(null)
     try {
@@ -202,16 +203,16 @@ export default function Page() {
       const reason = error instanceof Error && error.message ? error.message : 'Android could not check notification permission.'
       setNotificationError(`Could not enable alerts: ${reason} Check notification permission in your phone settings and try again.`)
     }
-  }
+  }, [])
 
-  const disableNotifications = () => {
+  const disableNotifications = useCallback(() => {
     window.localStorage.setItem('routine-notifications-enabled', '0')
     setNotificationsEnabled(false)
     setNotificationError(null)
     setNotificationStatus('Notifications are off.')
-  }
+  }, [])
 
-  const testNotification = async () => {
+  const testNotification = useCallback(async () => {
     setNotificationError(null)
     try {
       await sendTestNotification()
@@ -219,18 +220,22 @@ export default function Page() {
     } catch {
       setNotificationError('Test alert could not be scheduled. Check your phone notification settings.')
     }
-  }
+  }, [])
 
-  const changeNotificationLead = (minutes: number) => {
+  const changeNotificationLead = useCallback((minutes: number) => {
     setNotificationLead(minutes)
     window.localStorage.setItem('routine-notification-lead', String(minutes))
-  }
+  }, [])
 
-  const dismissNotice = () => {
+  const dismissNotice = useCallback(() => {
     if (!scheduleNotice) return
     dismissScheduleNotice(scheduleNotice.id)
     setScheduleNotice(null)
-  }
+  }, [scheduleNotice])
+
+  const closeFeatures = useCallback(() => setFeaturesOpen(false), [])
+  const closeReminders = useCallback(() => setSheetOpen(false), [])
+  const closeAccount = useCallback(() => setAccountOpen(false), [])
 
   useEffect(() => {
     if (!isMounted) return
@@ -255,9 +260,25 @@ export default function Page() {
 
   useEffect(() => monitorAppUpdates(setAppUpdate), [])
 
-  const weekDates = useMemo(() => (now ? getWeekDates(now) : null), [now])
+  const weekAnchorKey = now ? toDateKey(getWeekDates(now)[0]) : null
+  const weekDates = useMemo(
+    () => weekAnchorKey ? getWeekDates(parseDateKey(weekAnchorKey)) : null,
+    [weekAnchorKey]
+  )
   const selectedDate = weekDates ? weekDates[DAYS.indexOf(selectedDay)] : null
   const selectedHoliday = getBangladeshNationalHoliday(selectedDate)
+  const clockDateKey = now ? toDateKey(now) : null
+  const selectedExams = useMemo(
+    () => getBatch69MidtermExams(selectedDate ? toDateKey(selectedDate) : null, selectedSection),
+    [selectedDate, selectedSection]
+  )
+  const selectedDateKey = selectedDate ? toDateKey(selectedDate) : null
+  const upcomingExams = useMemo(
+    () => getUpcomingBatch69MidtermExams(clockDateKey, selectedDateKey, selectedSection),
+    [clockDateKey, selectedDateKey, selectedSection]
+  )
+  const reminderNow = useMemo(() => clockDateKey ? parseDateKey(clockDateKey) : null, [clockDateKey])
+  const todayDay = isMounted && now !== null ? getToday(now) : null
 
   const dayClasses = useMemo(
     () =>
@@ -266,8 +287,7 @@ export default function Page() {
         .sort((a, b) => a.startMinutes - b.startMinutes),
     [selectedDay, selectedSection, personalClasses]
   )
-  const visibleDayClasses = selectedHoliday ? [] : dayClasses
-
+  const visibleDayClasses = useMemo(() => selectedHoliday ? [] : dayClasses, [selectedHoliday, dayClasses])
   // How many active classes each day of the week has (shown under each day tab).
   const weekCounts = useMemo(() => {
     const source = [...ROUTINE_DATA, ...personalClasses]
@@ -298,7 +318,7 @@ export default function Page() {
       }
     }
     return [...seen].map(([code, title]) => ({ code, title })).sort((a, b) => a.code.localeCompare(b.code))
-  }, [selectedSection, personalClasses, labGroup])
+  }, [selectedSection, personalClasses])
 
   // Pending reminders grouped by calendar date (for the day card and the red dots on the tab bar).
   const pendingByDate = useMemo(() => {
@@ -311,20 +331,32 @@ export default function Page() {
     () => ROUTINE_DATA.some((item) => item.section === selectedSection),
     [selectedSection]
   )
+  const exportCalendar = useCallback(
+    (weeks: number) => downloadRoutineCalendar(selectedSectionClasses, selectedSection, weeks),
+    [selectedSectionClasses, selectedSection]
+  )
 
-  const totalDurationMinutes = visibleDayClasses
-    .filter((item) => !isInactive(item, skippedCourses, skippedLabs, labGroup))
-    .reduce((total, item) => total + item.endMinutes - item.startMinutes, 0)
-  const regularCount = visibleDayClasses.filter((item) => !item.isRetake && !isInactive(item, skippedCourses, skippedLabs, labGroup)).length
+  const activeClasses = useMemo(
+    () => visibleDayClasses.filter((item) => !isInactive(item, skippedCourses, skippedLabs, labGroup)),
+    [visibleDayClasses, skippedCourses, skippedLabs, labGroup]
+  )
+  const totalDurationMinutes = useMemo(
+    () => activeClasses.reduce((total, item) => total + item.endMinutes - item.startMinutes, 0),
+    [activeClasses]
+  )
+  const regularCount = useMemo(() => activeClasses.filter((item) => !item.isRetake).length, [activeClasses])
   const currentMinutes = now ? now.getHours() * 60 + now.getMinutes() : -1
-  const dayReminders = selectedDate ? pendingByDate[toDateKey(selectedDate)] ?? [] : []
-  const dayDoneCount = selectedDate
-    ? reminders.filter((r) => r.done && r.date === toDateKey(selectedDate)).length
-    : 0
+  const dayReminders = useMemo(
+    () => selectedDate ? pendingByDate[toDateKey(selectedDate)] ?? [] : [],
+    [selectedDate, pendingByDate]
+  )
+  const dayDoneCount = useMemo(
+    () => selectedDate ? reminders.filter((r) => r.done && r.date === toDateKey(selectedDate)).length : 0,
+    [selectedDate, reminders]
+  )
   const isViewingToday = isMounted && now !== null && selectedDay === getToday(now)
   // Friday has no tab; the tabs then show the coming week.
   const isNextWeek = isMounted && now !== null && getToday(now) === null
-  const activeClasses = visibleDayClasses.filter((item) => !isInactive(item, skippedCourses, skippedLabs, labGroup))
   const ongoingClass = isViewingToday
     ? activeClasses.find((item) => item.startMinutes <= currentMinutes && currentMinutes < item.endMinutes)
     : undefined
@@ -404,12 +436,12 @@ export default function Page() {
           />
 
           <DashboardReminders
-            auth={auth}
+            isSignedIn={!!auth.user}
             dayReminders={dayReminders}
             dayDoneCount={dayDoneCount}
             isViewingToday={isViewingToday}
-            now={now}
-            onOpenAccount={() => openAccount()}
+            now={reminderNow}
+            onOpenAccount={openAccount}
             onToggle={toggleReminder}
           />
 
@@ -422,6 +454,8 @@ export default function Page() {
             sectionHasData={sectionHasData}
             personal={personal}
             selectedHoliday={selectedHoliday}
+            midtermExams={selectedExams}
+            upcomingMidtermExams={upcomingExams}
             visibleDayClasses={visibleDayClasses}
             skippedCourses={skippedCourses}
             skippedLabs={skippedLabs}
@@ -438,13 +472,12 @@ export default function Page() {
           weekDates={weekDates}
           weekCounts={weekCounts}
           pendingByDate={pendingByDate}
-          isMounted={isMounted}
-          now={now}
+          todayDay={todayDay}
         />
 
         <AccountSheet
           open={accountOpen}
-          onClose={() => setAccountOpen(false)}
+          onClose={closeAccount}
           auth={auth}
           reason={accountReason}
           themeMode={themeMode}
@@ -455,7 +488,7 @@ export default function Page() {
 
         <FeatureCenterSheet
           open={featuresOpen}
-          onClose={() => setFeaturesOpen(false)}
+          onClose={closeFeatures}
           section={selectedSection}
           labGroup={labGroup}
           labGroups={labGroups}
@@ -471,15 +504,15 @@ export default function Page() {
           onLeadChange={changeNotificationLead}
           notificationError={notificationError}
           notificationStatus={notificationStatus}
-          onExportCalendar={(weeks) => downloadRoutineCalendar(selectedSectionClasses, selectedSection, weeks)}
+          onExportCalendar={exportCalendar}
         />
 
         <ReminderSheet
           error={reminderError}
           open={sheetOpen}
-          onClose={() => setSheetOpen(false)}
+          onClose={closeReminders}
           reminders={reminders}
-          now={now}
+          now={reminderNow}
           courses={courseOptions}
           onAdd={addReminder}
           onToggle={toggleReminder}

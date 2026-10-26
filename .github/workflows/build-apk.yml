@@ -169,6 +169,15 @@ jobs:
           styles.write_text(content)
           PY
 
+      - name: Format Android version
+        id: android-version
+        env:
+          ANDROID_VERSION_CODE: ${{ github.run_number }}
+        run: |
+          version_major=$((ANDROID_VERSION_CODE / 10))
+          version_minor=$((ANDROID_VERSION_CODE % 10))
+          echo "name=${version_major}.${version_minor}" >> "$GITHUB_OUTPUT"
+
       - name: Build signed release APK
         env:
           ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/android-signing/release.jks
@@ -176,7 +185,7 @@ jobs:
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
           ANDROID_VERSION_CODE: ${{ github.run_number }}
-          ANDROID_VERSION_NAME: 4.0.${{ github.run_number }}
+          ANDROID_VERSION_NAME: ${{ steps.android-version.outputs.name }}
         run: |
           cd android
           chmod +x gradlew
@@ -195,9 +204,9 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: apk-build-${{ github.run_number }}
-          name: Routine Scrapper Max APK — build ${{ github.run_number }}
+          name: Routine Scrapper Max APK — version ${{ steps.android-version.outputs.name }}
           body: |
-            Automatically built Android update, build ${{ github.run_number }}.
+            Automatically built Android update, version ${{ steps.android-version.outputs.name }} (build ${{ github.run_number }}).
 
             APK signing: stable
             Update urgency: ${{ inputs.update_urgency || 'normal' }}
