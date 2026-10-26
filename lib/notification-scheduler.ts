@@ -107,12 +107,14 @@ export async function syncScheduledNotifications({
   reminders,
   leadMinutes,
   holidayDates = [],
+  pausedClassDates = [],
 }: {
   enabled: boolean
   classes: RoutineItem[]
   reminders: Reminder[]
   leadMinutes: number
   holidayDates?: string[]
+  pausedClassDates?: readonly string[]
 }): Promise<number> {
   browserTimers.forEach(clearTimeout)
   browserTimers = []
@@ -121,11 +123,13 @@ export async function syncScheduledNotifications({
 
   const now = new Date()
   const holidayDateSet = new Set(holidayDates)
+  const pausedClassDateSet = new Set(pausedClassDates)
   const scheduled: { id: number; title: string; body: string; at: Date }[] = []
   for (const item of classes) {
     for (let week = 0; week < 6; week++) {
       const at = nextClassAlarm(item, leadMinutes, week, now)
-      if (at > now && !holidayDateSet.has(localDateKey(at))) scheduled.push({
+      const classDate = localDateKey(at)
+      if (at > now && !holidayDateSet.has(classDate) && !pausedClassDateSet.has(classDate)) scheduled.push({
         id: idFor(`class|${item.id}|${at.toISOString()}`),
         title: `Class soon · ${item.courseCode}`,
         body: `${item.startTime} · ${item.room}${item.subSection ? ` · ${item.subSection}` : ''}`,

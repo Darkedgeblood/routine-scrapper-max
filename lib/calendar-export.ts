@@ -1,4 +1,4 @@
-import type { RoutineItem } from '@/lib/routine-data'
+import type { RoutineItem } from './routine-data.ts'
 
 const WEEKDAY_NUMBER: Record<string, number> = {
   Sunday: 0,
@@ -21,6 +21,11 @@ function formatIcsDate(date: Date) {
 
 function formatIcsUtc(date: Date) {
   return date.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z')
+}
+
+function localDateKey(date: Date) {
+  const pad = (value: number) => String(value).padStart(2, '0')
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`
 }
 
 function firstOccurrence(item: RoutineItem, now: Date) {
@@ -53,8 +58,16 @@ function foldLine(line: string) {
   return chunks.join('\r\n')
 }
 
-export function downloadRoutineCalendar(items: RoutineItem[], section: string, weeks: number) {
-  const stamp = formatIcsUtc(new Date())
+export function createRoutineCalendarText(
+  items: RoutineItem[],
+  section: string,
+  weeks: number,
+  excludedClassDates: readonly string[] = [],
+  now = new Date()
+) {
+  const stamp = formatIcsUtc(now)
+  const recurrenceWeeks = Math.max(1, Math.min(weeks, 24))
+  const excludedDates = new Set(excludedClassDates)
   const lines = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
@@ -65,8 +78,16 @@ export function downloadRoutineCalendar(items: RoutineItem[], section: string, w
   ]
 
   for (const item of items) {
-    const start = firstOccurrence(item, new Date())
+    const start = firstOccurrence(item, now)
     const end = new Date(start.getTime() + (item.endMinutes - item.startMinutes) * 60_000)
+    const excludedOccurrences: string[] = []
+    const occurrence = new Date(start)
+    for (let week = 0; week < recurrenceWeeks; week++) {
+      if (excludedDates.has(localDateKey(occurrence))) {
+        excludedOccurrences.push(`EXDATE:${formatIcsDate(occurrence)}`)
+      }
+      occurrence.setDate(occurrence.getDate() + 7)
+    }
     const description = [
       item.courseTitle,
       `Section ${item.section}`,
@@ -79,7 +100,8 @@ export function downloadRoutineCalendar(items: RoutineItem[], section: string, w
       `DTSTAMP:${stamp}`,
       `DTSTART:${formatIcsDate(start)}`,
       `DTEND:${formatIcsDate(end)}`,
-      `RRULE:FREQ=WEEKLY;COUNT=${Math.max(1, Math.min(weeks, 24))}`,
+      `RRULE:FREQ=WEEKLY;COUNT=${recurrenceWeeks}`,
+      ...excludedOccurrences,
       `SUMMARY:${escapeIcs(`${item.courseCode} · ${item.courseTitle}`)}`,
       `DESCRIPTION:${escapeIcs(description)}`,
       `LOCATION:${escapeIcs(item.room)}`,
@@ -88,7 +110,17 @@ export function downloadRoutineCalendar(items: RoutineItem[], section: string, w
   }
 
   lines.push('END:VCALENDAR')
-  const file = new Blob([lines.map(foldLine).join('\r\n') + '\r\n'], { type: 'text/calendar;charset=utf-8' })
+  return lines.map(foldLine).join('\r\n') + '\r\n'
+}
+
+export function downloadRoutineCalendar(
+  items: RoutineItem[],
+  section: string,
+  weeks: number,
+  excludedClassDates: readonly string[] = []
+) {
+  const content = createRoutineCalendarText(items, section, weeks, excludedClassDates)
+  const file = new Blob([content], { type: 'text/calendar;charset=utf-8' })
   const url = URL.createObjectURL(file)
   const link = document.createElement('a')
   link.href = url
