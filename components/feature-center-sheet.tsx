@@ -202,7 +202,7 @@ export const FeatureCenterSheet = memo(function FeatureCenterSheet({
                 <span>Export calendar (.ics)</span>
               </button>
             </div>
-            <p className="mt-2 text-[11px] text-slate-400 dark:text-slate-500">Events repeat weekly; holidays and one-off room changes aren’t included in the calendar file.</p>
+            <p className="mt-2 text-[11px] text-slate-400 dark:text-slate-500">Classes repeat weekly; holiday listings and one-off room changes aren’t included. The scheduled Batch 69 midterm break is excluded.</p>
           </section>
 
           <section className="settings-group mt-3 rounded-2xl p-3.5">

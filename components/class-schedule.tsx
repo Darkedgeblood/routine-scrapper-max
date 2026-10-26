@@ -20,6 +20,7 @@ type ClassScheduleProps = {
   sectionHasData: boolean
   personal: boolean
   selectedHoliday: BangladeshNationalHoliday | null
+  midtermPeriod: boolean
   midtermExams: MidtermExam[]
   upcomingMidtermExams: MidtermExam[]
   visibleDayClasses: RoutineItem[]
@@ -38,6 +39,7 @@ export const ClassSchedule = memo(function ClassSchedule({
   sectionHasData,
   personal,
   selectedHoliday,
+  midtermPeriod,
   midtermExams,
   upcomingMidtermExams,
   visibleDayClasses,
@@ -96,6 +98,11 @@ export const ClassSchedule = memo(function ClassSchedule({
         onTouchEnd={finishSwipe}
         onTouchCancel={() => { touchStart.current = null }}
       >
+        {midtermPeriod && (
+          <div className="panel panel-dim rounded-2xl px-4 py-3 text-[13px] text-slate-600 dark:text-slate-300">
+            Regular classes are paused during the Batch 69 midterm exam period (Oct 28–Nov 4).
+          </div>
+        )}
         {midtermExams.map((exam) => (
           <article key={`${exam.date}-${exam.courseCode}`} className="panel flex items-stretch gap-3.5 rounded-2xl p-4 sm:gap-5">
             <div className="flex w-[84px] shrink-0 flex-col justify-center border-r border-slate-200 pr-3 dark:border-white/10 sm:w-[96px] sm:pr-4">

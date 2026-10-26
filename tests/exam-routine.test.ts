@@ -1,7 +1,14 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 
-import { BATCH_69_MIDTERM_EXAMS, getBatch69MidtermExams, getUpcomingBatch69MidtermExams } from '../lib/exam-routine.ts'
+import {
+  BATCH_69_MIDTERM_EXAMS,
+  BATCH_69_MIDTERM_PERIOD,
+  filterMidtermPeriodClasses,
+  getBatch69MidtermExams,
+  getUpcomingBatch69MidtermExams,
+  isBatch69MidtermPeriod,
+} from '../lib/exam-routine.ts'
 
 test('lists the three Batch 69 midterm exams with Slot B time and no seat details', () => {
   assert.deepEqual(BATCH_69_MIDTERM_EXAMS, [
@@ -44,4 +51,27 @@ test('keeps future exams visible without duplicating the selected-day exam', () 
   )
   assert.deepEqual(getUpcomingBatch69MidtermExams('2026-11-04', null, '69_P'), [])
   assert.deepEqual(getUpcomingBatch69MidtermExams('2026-10-26', null, '68_A'), [])
+})
+
+test('pauses Batch 69 regular classes inclusively from October 28 through November 4', () => {
+  assert.deepEqual(BATCH_69_MIDTERM_PERIOD, { start: '2026-10-28', end: '2026-11-04' })
+  assert.equal(isBatch69MidtermPeriod('2026-10-28', '69_A'), true)
+  assert.equal(isBatch69MidtermPeriod('2026-11-04', '69_P'), true)
+  assert.equal(isBatch69MidtermPeriod('2026-10-27', '69_P'), false)
+  assert.equal(isBatch69MidtermPeriod('2026-11-05', '69_P'), false)
+  assert.equal(isBatch69MidtermPeriod('2026-10-29', '68_A'), false)
+})
+
+test('hides regular class cards but preserves personal retake classes in the exam period', () => {
+  const regularClass = { courseCode: 'CSE221', isRetake: false }
+  const retakeClass = { courseCode: 'CSE215', isRetake: true }
+
+  assert.deepEqual(
+    filterMidtermPeriodClasses([regularClass, retakeClass], '2026-10-29', '69_P'),
+    [retakeClass]
+  )
+  assert.deepEqual(
+    filterMidtermPeriodClasses([regularClass, retakeClass], '2026-11-05', '69_P'),
+    [regularClass, retakeClass]
+  )
 })

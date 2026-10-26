@@ -25,7 +25,13 @@ import { clearScheduledNotifications, requestNotificationPermission, sendTestNot
 import { BANGLADESH_NATIONAL_HOLIDAYS, getBangladeshNationalHoliday } from '@/lib/bangladesh-holidays'
 import { checkForScheduleChanges, dismissScheduleNotice, type ScheduleNotice } from '@/lib/schedule-changes'
 import { monitorAppUpdates, startApkUpdate, type AppUpdate } from '@/lib/app-updates'
-import { getBatch69MidtermExams, getUpcomingBatch69MidtermExams } from '@/lib/exam-routine'
+import {
+  BATCH_69_MIDTERM_PAUSED_CLASS_DATES,
+  filterMidtermPeriodClasses,
+  getBatch69MidtermExams,
+  getUpcomingBatch69MidtermExams,
+  isBatch69MidtermPeriod,
+} from '@/lib/exam-routine'
 import { usePersonalRoutine } from '@/hooks/use-personal-routine'
 import { formatCountdown, getToday, getWeekDates, isInactive, type RoutineDay } from '@/lib/routine-view'
 
@@ -246,6 +252,7 @@ export default function Page() {
       reminders: reminders.filter((item) => !item.done),
       leadMinutes: notificationLead,
       holidayDates: BANGLADESH_NATIONAL_HOLIDAYS.map((holiday) => holiday.date),
+      pausedClassDates: selectedSection.startsWith('69_') ? BATCH_69_MIDTERM_PAUSED_CLASS_DATES : [],
     }).then((count) => {
       if (!cancelled && notificationsEnabled) {
         setNotificationStatus(count > 0 ? `${count} upcoming alerts scheduled on this device.` : 'No upcoming alerts need scheduling yet.')
@@ -268,11 +275,12 @@ export default function Page() {
   const selectedDate = weekDates ? weekDates[DAYS.indexOf(selectedDay)] : null
   const selectedHoliday = getBangladeshNationalHoliday(selectedDate)
   const clockDateKey = now ? toDateKey(now) : null
-  const selectedExams = useMemo(
-    () => getBatch69MidtermExams(selectedDate ? toDateKey(selectedDate) : null, selectedSection),
-    [selectedDate, selectedSection]
-  )
   const selectedDateKey = selectedDate ? toDateKey(selectedDate) : null
+  const midtermPeriod = isBatch69MidtermPeriod(selectedDateKey, selectedSection)
+  const selectedExams = useMemo(
+    () => getBatch69MidtermExams(selectedDateKey, selectedSection),
+    [selectedDateKey, selectedSection]
+  )
   const upcomingExams = useMemo(
     () => getUpcomingBatch69MidtermExams(clockDateKey, selectedDateKey, selectedSection),
     [clockDateKey, selectedDateKey, selectedSection]
@@ -287,7 +295,10 @@ export default function Page() {
         .sort((a, b) => a.startMinutes - b.startMinutes),
     [selectedDay, selectedSection, personalClasses]
   )
-  const visibleDayClasses = useMemo(() => selectedHoliday ? [] : dayClasses, [selectedHoliday, dayClasses])
+  const visibleDayClasses = useMemo(
+    () => selectedHoliday ? [] : filterMidtermPeriodClasses(dayClasses, selectedDateKey, selectedSection),
+    [selectedHoliday, dayClasses, selectedDateKey, selectedSection]
+  )
   // How many active classes each day of the week has (shown under each day tab).
   const weekCounts = useMemo(() => {
     const source = [...ROUTINE_DATA, ...personalClasses]
@@ -298,10 +309,13 @@ export default function Page() {
         counts[day] = 0
         continue
       }
+      const dateKey = date ? toDateKey(date) : null
+      const midtermPause = isBatch69MidtermPeriod(dateKey, selectedSection)
       counts[day] = source.filter(
         (item) =>
           item.day === FULL_DAYS[day] &&
           (item.section === selectedSection || item.isRetake) &&
+          (!midtermPause || item.isRetake) &&
           !isInactive(item, skippedCourses, skippedLabs, labGroup)
       ).length
     }
@@ -332,7 +346,12 @@ export default function Page() {
     [selectedSection]
   )
   const exportCalendar = useCallback(
-    (weeks: number) => downloadRoutineCalendar(selectedSectionClasses, selectedSection, weeks),
+    (weeks: number) => downloadRoutineCalendar(
+      selectedSectionClasses,
+      selectedSection,
+      weeks,
+      selectedSection.startsWith('69_') ? BATCH_69_MIDTERM_PAUSED_CLASS_DATES : []
+    ),
     [selectedSectionClasses, selectedSection]
   )
 
@@ -364,17 +383,28 @@ export default function Page() {
   const upcomingClass = isViewingToday
     ? activeClasses.find((item) => item.startMinutes > currentMinutes)
     : activeClasses[0]
-  const upNextLabel = selectedHoliday ? 'National holiday' : isViewingToday ? 'Next up' : 'First class'
+  const upNextLabel = selectedHoliday
+    ? 'National holiday'
+    : selectedExams.length > 0
+      ? 'Midterm exam'
+      : midtermPeriod
+        ? 'Midterm exam period'
+        : isViewingToday ? 'Next up' : 'First class'
   const upNextEmpty = isViewingToday && activeClasses.length > 0 ? 'No more classes' : 'No classes'
 
   const upNextDetail = selectedHoliday
     ? `${selectedHoliday.name} Holiday`
+    : selectedExams[0]
+    ? `${selectedExams[0].courseCode} · ${selectedExams[0].startTime} - ${selectedExams[0].endTime}`
+    : midtermPeriod
+    ? 'Regular classes are paused'
     : upcomingClass
     ? `${upcomingClass.courseCode} · ${upcomingClass.startTime} - ${upcomingClass.endTime}`
     : upNextEmpty
   // A secondary line under "next up": live status when viewing today.
-  const upNextSub =
-    isViewingToday && now !== null
+  const upNextSub = selectedExams[0]
+    ? selectedExams[0].courseTitle
+    : isViewingToday && now !== null
       ? ongoingClass
         ? `In session · ends ${ongoingClass.endTime}`
         : upcomingClass
@@ -389,6 +419,8 @@ export default function Page() {
     ? { dot: 'bg-slate-400', label: `Viewing ${FULL_DAYS[selectedDay]}`, pulse: false }
     : selectedHoliday
     ? { dot: 'bg-slate-400', label: `${selectedHoliday.name} holiday`, pulse: false }
+    : midtermPeriod
+    ? { dot: 'bg-slate-400', label: selectedExams[0] ? `Midterm exam · ${selectedExams[0].courseCode}` : 'Midterm exam period', pulse: false }
     : ongoingClass
     ? { dot: 'bg-[#30D158]', label: `In session · ${ongoingClass.courseCode}`, pulse: true }
     : upcomingClass
@@ -454,6 +486,7 @@ export default function Page() {
             sectionHasData={sectionHasData}
             personal={personal}
             selectedHoliday={selectedHoliday}
+            midtermPeriod={midtermPeriod}
             midtermExams={selectedExams}
             upcomingMidtermExams={upcomingExams}
             visibleDayClasses={visibleDayClasses}
