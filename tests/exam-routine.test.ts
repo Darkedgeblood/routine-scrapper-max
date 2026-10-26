@@ -6,7 +6,6 @@ import {
   BATCH_69_MIDTERM_PERIOD,
   filterMidtermPeriodClasses,
   getBatch69MidtermExams,
-  getUpcomingBatch69MidtermExams,
   isBatch69MidtermPeriod,
 } from '../lib/exam-routine.ts'
 
@@ -42,15 +41,6 @@ test('shows each exam to Batch 69 sections only', () => {
   assert.deepEqual(getBatch69MidtermExams('2026-10-29', '68_A'), [])
   assert.deepEqual(getBatch69MidtermExams('2026-10-29', '69_Z'), [])
   assert.deepEqual(getBatch69MidtermExams(null, '69_P'), [])
-})
-
-test('keeps future exams visible without duplicating the selected-day exam', () => {
-  assert.deepEqual(
-    getUpcomingBatch69MidtermExams('2026-10-26', '2026-10-29', '69_P').map((exam) => exam.courseCode),
-    ['CSE215', 'AOL101']
-  )
-  assert.deepEqual(getUpcomingBatch69MidtermExams('2026-11-04', null, '69_P'), [])
-  assert.deepEqual(getUpcomingBatch69MidtermExams('2026-10-26', null, '68_A'), [])
 })
 
 test('pauses Batch 69 regular classes inclusively from October 28 through November 4', () => {

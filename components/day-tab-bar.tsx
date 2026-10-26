@@ -30,14 +30,16 @@ export const DayTabBar = memo(function DayTabBar({ tabDay, onSelectDay, weekDate
             const isToday = day === todayDay
             const active = tabDay === day
             const count = weekCounts[day]
-            const hasDue = weekDates ? (pendingByDate[toDateKey(weekDates[index])]?.length ?? 0) > 0 : false
+            const hasDueReminder = weekDates ? (pendingByDate[toDateKey(weekDates[index])]?.length ?? 0) > 0 : false
+            const dateColor = hasDueReminder
+              ? 'text-[#FF3B30] dark:text-[#FF453A]'
+              : active ? 'text-slate-900 dark:text-white' : 'text-slate-400 dark:text-slate-500'
             return (
-              <button key={day} type="button" onClick={() => onSelectDay(day)} aria-current={isToday ? 'date' : undefined} aria-pressed={active} className="ios-pressable relative z-10 flex min-h-11 flex-1 flex-col items-center gap-0.5 rounded-2xl py-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007AFF]/60 dark:focus-visible:ring-[#0A84FF]/60">
+              <button key={day} type="button" onClick={() => onSelectDay(day)} aria-label={`${day}${weekDates ? ` ${weekDates[index].getDate()}` : ''}${hasDueReminder ? ', reminder due' : ''}`} aria-current={isToday ? 'date' : undefined} aria-pressed={active} className="ios-pressable relative z-10 flex min-h-11 flex-1 flex-col items-center gap-0.5 rounded-2xl py-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007AFF]/60 dark:focus-visible:ring-[#0A84FF]/60">
                 <span className={`text-[10px] font-semibold uppercase tracking-wide transition-colors duration-200 ${active ? IOS_BLUE : 'text-slate-400 dark:text-slate-500'}`}>{day}</span>
-                <span className={`text-[14px] font-bold tabular-nums transition-colors duration-200 ${active ? 'text-slate-900 dark:text-white' : 'text-slate-400 dark:text-slate-500'}`}>{weekDates ? weekDates[index].getDate() : '·'}</span>
+                <span className={`text-[14px] font-bold tabular-nums transition-colors duration-200 ${dateColor}`}>{weekDates ? weekDates[index].getDate() : '·'}</span>
                 <span className="text-[9px] font-medium tabular-nums text-slate-400 dark:text-slate-500">{count > 0 ? `${count} class${count === 1 ? '' : 'es'}` : ' '}</span>
                 {isToday && <span aria-label="Today" className={`mt-0.5 size-1 rounded-full ${IOS_BLUE}`} />}
-                {hasDue && <span aria-label="Has a reminder due" className="absolute right-2 top-1.5 size-1.5 rounded-full bg-[#FF3B30]" />}
               </button>
             )
           })}

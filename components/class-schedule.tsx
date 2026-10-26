@@ -6,7 +6,6 @@ import { ArrowDown, CalendarDays, Coffee, MapPin, Users } from 'lucide-react'
 import { DAYS, FULL_DAYS, TEACHERS, type RoutineItem } from '@/lib/routine-data'
 import type { BangladeshNationalHoliday } from '@/lib/bangladesh-holidays'
 import type { MidtermExam } from '@/lib/exam-routine'
-import { parseDateKey } from '@/lib/reminders'
 import { isInactive, isOtherLabGroup, isSkippedCourse, teacherLabel, type RoutineDay } from '@/lib/routine-view'
 
 const FOCUS_RING = 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#007AFF]/60 dark:focus-visible:ring-[#0A84FF]/60'
@@ -22,7 +21,7 @@ type ClassScheduleProps = {
   selectedHoliday: BangladeshNationalHoliday | null
   midtermPeriod: boolean
   midtermExams: MidtermExam[]
-  upcomingMidtermExams: MidtermExam[]
+  highlightedCourseCodes: string[]
   visibleDayClasses: RoutineItem[]
   skippedCourses: string[]
   skippedLabs: string[]
@@ -41,7 +40,7 @@ export const ClassSchedule = memo(function ClassSchedule({
   selectedHoliday,
   midtermPeriod,
   midtermExams,
-  upcomingMidtermExams,
+  highlightedCourseCodes,
   visibleDayClasses,
   skippedCourses,
   skippedLabs,
@@ -135,6 +134,7 @@ export const ClassSchedule = memo(function ClassSchedule({
           const gapMins = gap % 60
           const inactive = isInactive(item, skippedCourses, skippedLabs, labGroup)
           const ongoing = ongoingClass?.id === item.id
+          const hasDueReminder = highlightedCourseCodes.includes(item.courseCode)
           const inactiveLabel = isSkippedCourse(item, skippedCourses)
             ? 'Not registered'
             : isOtherLabGroup(item, labGroup)
@@ -153,6 +153,8 @@ export const ClassSchedule = memo(function ClassSchedule({
                 </div>
               )}
               <article className={`panel flex items-stretch gap-3.5 rounded-2xl p-4 transition-colors sm:gap-5 ${
+                hasDueReminder ? 'ring-2 ring-inset ring-[#FFCC00]/80 dark:ring-[#FFD60A]/80' : ''
+              } ${
                 ongoing ? 'ios-now' : inactive ? 'panel-dim opacity-50 grayscale' : 'hover:border-slate-300 dark:hover:border-slate-600'
               }`}>
                 <div className="flex w-[84px] shrink-0 flex-col justify-center border-r border-slate-200 pr-3 dark:border-white/10 sm:w-[96px] sm:pr-4">
@@ -185,25 +187,6 @@ export const ClassSchedule = memo(function ClassSchedule({
         })}
       </div>
 
-      {upcomingMidtermExams.length > 0 && (
-        <section className="mt-5" aria-label="Upcoming midterm exams">
-          <h2 className="mb-2 px-1 text-[12px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">Upcoming midterm exams</h2>
-          <div className="flex flex-col gap-2">
-            {upcomingMidtermExams.map((exam) => (
-              <article key={`${exam.date}-${exam.courseCode}`} className="panel flex items-center justify-between gap-3 rounded-2xl p-3.5">
-                <div className="min-w-0">
-                  <h3 className="truncate text-[14px] font-semibold">{exam.courseCode} · {exam.courseTitle}</h3>
-                  <p className="mt-1 text-[12px] text-slate-500 dark:text-slate-400">
-                    {parseDateKey(exam.date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
-                    {' · '}{exam.startTime}–{exam.endTime}
-                  </p>
-                </div>
-                <span className="shrink-0 rounded-full bg-[#007AFF]/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-[#007AFF] dark:bg-[#0A84FF]/15 dark:text-[#0A84FF]">Batch 69</span>
-              </article>
-            ))}
-          </div>
-        </section>
-      )}
     </section>
   )
 })

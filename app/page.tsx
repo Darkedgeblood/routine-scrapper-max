@@ -29,7 +29,6 @@ import {
   BATCH_69_MIDTERM_PAUSED_CLASS_DATES,
   filterMidtermPeriodClasses,
   getBatch69MidtermExams,
-  getUpcomingBatch69MidtermExams,
   isBatch69MidtermPeriod,
 } from '@/lib/exam-routine'
 import { usePersonalRoutine } from '@/hooks/use-personal-routine'
@@ -281,10 +280,6 @@ export default function Page() {
     () => getBatch69MidtermExams(selectedDateKey, selectedSection),
     [selectedDateKey, selectedSection]
   )
-  const upcomingExams = useMemo(
-    () => getUpcomingBatch69MidtermExams(clockDateKey, selectedDateKey, selectedSection),
-    [clockDateKey, selectedDateKey, selectedSection]
-  )
   const reminderNow = useMemo(() => clockDateKey ? parseDateKey(clockDateKey) : null, [clockDateKey])
   const todayDay = isMounted && now !== null ? getToday(now) : null
 
@@ -334,7 +329,7 @@ export default function Page() {
     return [...seen].map(([code, title]) => ({ code, title })).sort((a, b) => a.code.localeCompare(b.code))
   }, [selectedSection, personalClasses])
 
-  // Pending reminders grouped by calendar date (for the day card and the red dots on the tab bar).
+  // Pending reminders grouped by calendar date for the day bar and matching class cards.
   const pendingByDate = useMemo(() => {
     const map: Record<string, typeof pending> = {}
     for (const r of pending) (map[r.date] ??= []).push(r)
@@ -368,6 +363,10 @@ export default function Page() {
   const dayReminders = useMemo(
     () => selectedDate ? pendingByDate[toDateKey(selectedDate)] ?? [] : [],
     [selectedDate, pendingByDate]
+  )
+  const highlightedCourseCodes = useMemo(
+    () => [...new Set(dayReminders.map((reminder) => reminder.course).filter(Boolean))],
+    [dayReminders]
   )
   const dayDoneCount = useMemo(
     () => selectedDate ? reminders.filter((r) => r.done && r.date === toDateKey(selectedDate)).length : 0,
@@ -488,7 +487,7 @@ export default function Page() {
             selectedHoliday={selectedHoliday}
             midtermPeriod={midtermPeriod}
             midtermExams={selectedExams}
-            upcomingMidtermExams={upcomingExams}
+            highlightedCourseCodes={highlightedCourseCodes}
             visibleDayClasses={visibleDayClasses}
             skippedCourses={skippedCourses}
             skippedLabs={skippedLabs}

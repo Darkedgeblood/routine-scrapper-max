@@ -26,7 +26,9 @@ Never commit the `.jks` file, its passwords, or the decoded Base64 value. The wo
 
 Merging to `main` runs the **Build Android APK** workflow and publishes a release. To mark an update as critical, run the workflow manually from **Actions → Build Android APK** and select **critical** for `update_urgency`.
 
-The Android app checks GitHub Releases when it opens and returns to the foreground. If notifications are allowed, it can notify users about a new release. Tapping the notification downloads the APK; Android then asks the user to approve installation. Updates are not installed silently, and the app checks for them when it opens or resumes rather than through a server push.
+The Android app checks GitHub Releases when it opens and returns to the foreground. It only offers major pointer versions (for example, `5.0`) by default; a release explicitly marked `critical` can also be offered between major versions. Normal minor APK releases do not trigger an update prompt or notification.
+
+The APK loads the app website from Vercel, so website changes such as routine data and interface updates become available without reinstalling the APK. Changes to the native Android shell, permissions, or bundled plugins still need a new APK. Tapping an update notice downloads the APK, and Android asks the user to approve installation; updates are never installed silently.
 
 ## Existing installs signed with the old key
 
