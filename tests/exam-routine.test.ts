@@ -9,8 +9,14 @@ import {
   isBatch69MidtermPeriod,
 } from '../lib/exam-routine.ts'
 
-test('lists the three Batch 69 midterm exams with Slot B time and no seat details', () => {
-  assert.deepEqual(BATCH_69_MIDTERM_EXAMS, [
+test('lists the three Batch 69 midterm exams with Slot B time', () => {
+  assert.deepEqual(BATCH_69_MIDTERM_EXAMS.map(({ date, courseCode, courseTitle, startTime, endTime }) => ({
+    date,
+    courseCode,
+    courseTitle,
+    startTime,
+    endTime,
+  })), [
     {
       date: '2026-10-29',
       courseCode: 'CSE221',
@@ -41,6 +47,29 @@ test('shows each exam to Batch 69 sections only', () => {
   assert.deepEqual(getBatch69MidtermExams('2026-10-29', '68_A'), [])
   assert.deepEqual(getBatch69MidtermExams('2026-10-29', '69_Z'), [])
   assert.deepEqual(getBatch69MidtermExams(null, '69_P'), [])
+})
+
+test('returns room allocations for the selected section and total seat counts', () => {
+  const [sectionPExam] = getBatch69MidtermExams('2026-10-29', '69_P')
+  assert.deepEqual(sectionPExam?.seatAllocation, {
+    instructorInitials: 'SRS',
+    rooms: [{ room: '514', seats: 10 }, { room: '515', seats: 24 }, { room: '516', seats: 13 }],
+    totalSeats: 47,
+  })
+
+  for (const suffix of ['I', 'J', 'K', 'L', 'M', 'N', 'O', 'P']) {
+    const [exam] = getBatch69MidtermExams('2026-10-29', `69_${suffix}`)
+    const allocation = exam?.seatAllocation
+    assert.ok(allocation, `expected a room allocation for section 69_${suffix}`)
+    assert.equal(
+      allocation.rooms.reduce((sum, room) => sum + room.seats, 0),
+      allocation.totalSeats,
+      `room counts should add up for section 69_${suffix}`
+    )
+  }
+
+  const [unavailableSectionExam] = getBatch69MidtermExams('2026-10-29', '69_A')
+  assert.equal(unavailableSectionExam?.seatAllocation, null)
 })
 
 test('pauses Batch 69 regular classes inclusively from October 28 through November 4', () => {

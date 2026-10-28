@@ -116,6 +116,29 @@ export const ClassSchedule = memo(function ClassSchedule({
               </div>
               <p className="mt-1 text-[14px] text-slate-500 dark:text-slate-400">{exam.courseTitle}</p>
               <p className="mt-2 text-[12px] font-medium text-slate-400 dark:text-slate-500">Batch 69</p>
+              <div className="mt-3 rounded-xl border border-slate-200/80 bg-slate-50/70 p-3 dark:border-white/10 dark:bg-white/[0.03]">
+                {exam.seatAllocation ? (
+                  <>
+                    <div className="flex items-center justify-between gap-2">
+                      <div>
+                        <h4 className="text-[12px] font-semibold">Room allocation · {selectedSection}</h4>
+                        <p className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-400">Instructor: {exam.seatAllocation.instructorInitials}</p>
+                      </div>
+                      <span className="shrink-0 text-[11px] font-semibold tabular-nums text-slate-500 dark:text-slate-400">{exam.seatAllocation.totalSeats} seats</span>
+                    </div>
+                    <ul className="mt-2 grid grid-cols-2 gap-1.5" aria-label={`Rooms assigned to ${selectedSection}`}>
+                      {exam.seatAllocation.rooms.map(({ room, seats }) => (
+                        <li key={room} className="flex min-w-0 items-center justify-between gap-2 rounded-lg bg-white px-2.5 py-2 text-[11px] dark:bg-white/[0.05]">
+                          <span className="font-medium">Room {room}</span>
+                          <span className="shrink-0 tabular-nums text-slate-500 dark:text-slate-400">{seats} seats</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </>
+                ) : (
+                  <p className="text-[12px] text-slate-500 dark:text-slate-400">Room details for {selectedSection} aren’t available yet.</p>
+                )}
+              </div>
             </div>
           </article>
         ))}
