@@ -115,7 +115,7 @@ export const ReminderSheet = memo(function ReminderSheet({
   onToggle: (id: string) => void | Promise<void>
   onRemove: (id: string) => void | Promise<void>
 }) {
-  const sheet = useSheetMotion(open, onClose)
+  const sheet = useSheetMotion(open, onClose, { smoothSwipe: true })
   const today = now ?? new Date()
   const [type, setType] = useState<ReminderType>('quiz')
   const [course, setCourse] = useState('')
