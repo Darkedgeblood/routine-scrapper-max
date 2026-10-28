@@ -4,6 +4,17 @@ export type MidtermExam = {
   courseTitle: string
   startTime: string
   endTime: string
+  seatAllocation: MidtermSeatAllocation | null
+}
+
+export type MidtermSeatAllocation = {
+  instructorInitials: string
+  rooms: readonly { room: string; seats: number }[]
+  totalSeats: number
+}
+
+type MidtermExamData = Omit<MidtermExam, 'seatAllocation'> & {
+  seatAllocationsBySection?: Readonly<Record<string, MidtermSeatAllocation>>
 }
 
 export const BATCH_69_MIDTERM_PERIOD = {
@@ -40,15 +51,59 @@ export function filterMidtermPeriodClasses<T extends { isRetake?: boolean }>(
   return isBatch69MidtermPeriod(date, section) ? classes.filter((item) => item.isRetake) : classes
 }
 
-// Batch 69 mid-semester exams from the Fall 2026 CSE exam schedule.
-// Seat and room details are intentionally omitted until they are published.
-export const BATCH_69_MIDTERM_EXAMS: readonly MidtermExam[] = [
+// Batch 69 mid-semester exams and the published CSE221 room allocation rows
+// available for sections 69_I through 69_P.
+const CSE221_SEAT_ALLOCATIONS_BY_SECTION: Readonly<Record<string, MidtermSeatAllocation>> = {
+  '69_I': {
+    instructorInitials: 'MIZ',
+    rooms: [{ room: '220', seats: 21 }, { room: '221', seats: 24 }, { room: '222', seats: 6 }],
+    totalSeats: 51,
+  },
+  '69_J': {
+    instructorInitials: 'PPC',
+    rooms: [{ room: '222', seats: 18 }, { room: '223', seats: 24 }, { room: '224', seats: 9 }],
+    totalSeats: 51,
+  },
+  '69_K': {
+    instructorInitials: 'MIZ',
+    rooms: [{ room: '224', seats: 15 }, { room: '303', seats: 24 }, { room: '305', seats: 11 }],
+    totalSeats: 50,
+  },
+  '69_L': {
+    instructorInitials: 'PPC',
+    rooms: [{ room: '305', seats: 13 }, { room: '304', seats: 24 }, { room: '306', seats: 14 }],
+    totalSeats: 51,
+  },
+  '69_M': {
+    instructorInitials: 'AAA',
+    rooms: [{ room: '306', seats: 10 }, { room: '307', seats: 28 }, { room: '318A', seats: 11 }],
+    totalSeats: 49,
+  },
+  '69_N': {
+    instructorInitials: 'MIZ',
+    rooms: [{ room: '318A', seats: 13 }, { room: '318B', seats: 24 }, { room: '320', seats: 13 }],
+    totalSeats: 50,
+  },
+  '69_O': {
+    instructorInitials: 'AAA',
+    rooms: [{ room: '320', seats: 34 }, { room: '514', seats: 14 }],
+    totalSeats: 48,
+  },
+  '69_P': {
+    instructorInitials: 'SRS',
+    rooms: [{ room: '514', seats: 10 }, { room: '515', seats: 24 }, { room: '516', seats: 13 }],
+    totalSeats: 47,
+  },
+}
+
+export const BATCH_69_MIDTERM_EXAMS: readonly MidtermExamData[] = [
   {
     date: '2026-10-29',
     courseCode: 'CSE221',
     courseTitle: 'Object Oriented Programming',
     startTime: '11:30 AM',
     endTime: '01:00 PM',
+    seatAllocationsBySection: CSE221_SEAT_ALLOCATIONS_BY_SECTION,
   },
   {
     date: '2026-11-01',
@@ -68,5 +123,10 @@ export const BATCH_69_MIDTERM_EXAMS: readonly MidtermExam[] = [
 
 export function getBatch69MidtermExams(date: string | null, section: string): MidtermExam[] {
   if (!date || !isBatch69Section(section)) return []
-  return BATCH_69_MIDTERM_EXAMS.filter((exam) => exam.date === date)
+  return BATCH_69_MIDTERM_EXAMS
+    .filter((exam) => exam.date === date)
+    .map(({ seatAllocationsBySection, ...exam }) => ({
+      ...exam,
+      seatAllocation: seatAllocationsBySection?.[section] ?? null,
+    }))
 }
