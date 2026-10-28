@@ -126,11 +126,11 @@ export const ClassSchedule = memo(function ClassSchedule({
                       </div>
                       <span className="shrink-0 text-[11px] font-semibold tabular-nums text-slate-500 dark:text-slate-400">{exam.seatAllocation.totalSeats} seats</span>
                     </div>
-                    <ul className="mt-2 grid grid-cols-2 gap-1.5" aria-label={`Rooms assigned to ${selectedSection}`}>
+                    <ul className="mt-2 grid grid-cols-1 gap-1.5 sm:grid-cols-2" aria-label={`Rooms assigned to ${selectedSection}`}>
                       {exam.seatAllocation.rooms.map(({ room, seats }) => (
-                        <li key={room} className="flex min-w-0 items-center justify-between gap-2 rounded-lg bg-white px-2.5 py-2 text-[11px] dark:bg-white/[0.05]">
+                        <li key={room} className="flex min-w-0 items-center justify-between gap-3 rounded-lg bg-white px-3 py-2.5 text-[12px] dark:bg-white/[0.05]">
                           <span className="font-medium">Room {room}</span>
-                          <span className="shrink-0 tabular-nums text-slate-500 dark:text-slate-400">{seats} seats</span>
+                          <span className="shrink-0 whitespace-nowrap text-right tabular-nums text-slate-500 dark:text-slate-400">{seats} seats</span>
                         </li>
                       ))}
                     </ul>
