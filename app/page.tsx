@@ -20,6 +20,7 @@ import { ClassSchedule } from '@/components/class-schedule'
 import { DayTabBar } from '@/components/day-tab-bar'
 import { DashboardFooter } from '@/components/dashboard-footer'
 import { AppSplash } from '@/components/app-splash'
+import { ChangelogPopup } from '@/components/changelog-popup'
 import { downloadRoutineCalendar } from '@/lib/calendar-export'
 import { clearScheduledNotifications, requestNotificationPermission, sendTestNotification, syncScheduledNotifications } from '@/lib/notification-scheduler'
 import { BANGLADESH_NATIONAL_HOLIDAYS, getBangladeshNationalHoliday } from '@/lib/bangladesh-holidays'
@@ -506,6 +507,8 @@ export default function Page() {
           pendingByDate={pendingByDate}
           todayDay={todayDay}
         />
+
+        <ChangelogPopup enabled={isMounted && !showSplash} />
 
         <AccountSheet
           open={accountOpen}
