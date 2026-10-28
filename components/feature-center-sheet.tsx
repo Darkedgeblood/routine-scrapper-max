@@ -49,7 +49,7 @@ export const FeatureCenterSheet = memo(function FeatureCenterSheet({
   notificationStatus: string | null
   onExportCalendar: (weeks: number) => void
 }) {
-  const sheet = useSheetMotion(open, onClose)
+  const sheet = useSheetMotion(open, onClose, { smoothSwipe: true })
   const [weeks, setWeeks] = useState(16)
   const [feedbackType, setFeedbackType] = useState('Routine correction')
   const [feedbackClass, setFeedbackClass] = useState('')
