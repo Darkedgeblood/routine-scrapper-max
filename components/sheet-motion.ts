@@ -39,8 +39,6 @@ export function useSheetMotion(open: boolean, onClose: () => void, options: Shee
   const rootRef = useRef<HTMLDivElement>(null)
   const panelRef = useRef<HTMLDivElement>(null)
   const dragStart = useRef<DragStart | null>(null)
-  const dragFrame = useRef<number | null>(null)
-  const pendingDragOffset = useRef<number | null>(null)
   const exiting = useRef(false) // our own exit animation is running
   const exitTimer = useRef<number | null>(null)
   const swipeReturnTimer = useRef<number | null>(null)
@@ -51,10 +49,6 @@ export function useSheetMotion(open: boolean, onClose: () => void, options: Shee
   }, [onClose])
 
   useEffect(() => {
-    if (dragFrame.current !== null) window.cancelAnimationFrame(dragFrame.current)
-    dragFrame.current = null
-    pendingDragOffset.current = null
-
     if (!open) {
       if (exiting.current) {
         // The slide-out already played, so unmount without any further animation.
@@ -89,7 +83,6 @@ export function useSheetMotion(open: boolean, onClose: () => void, options: Shee
     () => () => {
       if (exitTimer.current !== null) window.clearTimeout(exitTimer.current)
       if (swipeReturnTimer.current !== null) window.clearTimeout(swipeReturnTimer.current)
-      if (dragFrame.current !== null) window.cancelAnimationFrame(dragFrame.current)
     },
     []
   )
@@ -120,7 +113,7 @@ export function useSheetMotion(open: boolean, onClose: () => void, options: Shee
     if (event.pointerType === 'mouse' && event.button !== 0) return
     const panel = panelRef.current
     let offsetY = 0
-    if (smoothSwipe && panel) {
+    if (smoothSwipe && panel && swipeReturnTimer.current !== null) {
       const transform = window.getComputedStyle(panel).transform
       const values = transform.startsWith('matrix3d(')
         ? transform.slice(9, -1).split(',')
@@ -149,21 +142,9 @@ export function useSheetMotion(open: boolean, onClose: () => void, options: Shee
     const panel = panelRef.current
     if (!panel) return
 
-    if (!smoothSwipe) {
-      panel.style.transform = `translate3d(0, ${distance}px, 0)`
-      return
-    }
-
-    pendingDragOffset.current = distance
-    if (dragFrame.current !== null) return
-    dragFrame.current = window.requestAnimationFrame(() => {
-      dragFrame.current = null
-      const offset = pendingDragOffset.current
-      pendingDragOffset.current = null
-      if (offset !== null && panelRef.current) {
-        panelRef.current.style.transform = `translate3d(0, ${offset}px, 0)`
-      }
-    })
+    // Match the profile sheet's direct transform updates so the panel follows the finger
+    // immediately; this path does no React state work or scheduled layout on release.
+    panel.style.transform = `translate3d(0, ${distance}px, 0)`
   }
 
   const finishDrag = (event: PointerEvent<HTMLDivElement>, cancelled: boolean) => {
@@ -171,21 +152,9 @@ export function useSheetMotion(open: boolean, onClose: () => void, options: Shee
     if (!start || start.pointerId !== event.pointerId) return
     dragStart.current = null
     const fingerDistance = Math.max(0, event.clientY - start.y)
-    const panelOffset = Math.max(0, start.offsetY + fingerDistance)
     const panel = panelRef.current
 
     if (smoothSwipe) {
-      if (dragFrame.current !== null) window.cancelAnimationFrame(dragFrame.current)
-      dragFrame.current = null
-      pendingDragOffset.current = null
-
-      if (panel) {
-        // Commit the finger's final position before starting either transition.
-        panel.style.transition = 'none'
-        panel.style.transform = `translate3d(0, ${panelOffset}px, 0)`
-        panel.getBoundingClientRect()
-      }
-
       const elapsed = Math.max(1, performance.now() - start.startedAt)
       const velocity = (event.clientY - start.y) / elapsed
       const dismiss = !cancelled && shouldDismissSheetSwipe(fingerDistance, panel?.clientHeight ?? 0, velocity)
@@ -199,7 +168,7 @@ export function useSheetMotion(open: boolean, onClose: () => void, options: Shee
           panel.style.removeProperty('transition')
           panel.style.removeProperty('transform')
         } else {
-          panel.style.transition = `transform ${SWIPE_RETURN_MS}ms cubic-bezier(0.22, 1, 0.36, 1)`
+          panel.style.transition = `transform ${SWIPE_RETURN_MS}ms cubic-bezier(0.32, 0.72, 0, 1)`
           panel.style.transform = 'translate3d(0, 0, 0)'
           swipeReturnTimer.current = window.setTimeout(() => {
             swipeReturnTimer.current = null
