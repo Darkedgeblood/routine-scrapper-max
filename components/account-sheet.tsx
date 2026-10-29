@@ -82,7 +82,7 @@ export function AccountSheet({
   const heading = auth.recovery ? 'New password' : auth.user ? 'Your profile' : 'Account'
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center" ref={sheet.rootRef} data-state={sheet.phase} role="presentation">
+    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center" {...sheet.rootProps}>
       <button type="button" aria-label="Close profile" className="sheet-backdrop absolute inset-0 bg-black/50" onClick={sheet.close} />
       <div
         ref={sheet.panelRef}
@@ -94,7 +94,7 @@ export function AccountSheet({
         <div className="sheet-drag-handle flex h-7 shrink-0 items-center justify-center sm:hidden" {...sheet.dragHandleProps} aria-hidden="true">
           <span className="sheet-grabber" />
         </div>
-        <div className="flex items-center justify-between px-5 pb-3 pt-1 sm:pt-5">
+        <div className="flex touch-none select-none items-center justify-between px-5 pb-3 pt-1 sm:pt-5" {...sheet.dragHandleProps}>
           <h2 className="text-[22px] font-bold tracking-tight">{heading}</h2>
           <button
             type="button"

@@ -3,86 +3,88 @@
 import { useCallback, useEffect, useRef, useState, type PointerEvent } from 'react'
 import { shouldDismissSheetSwipe } from '@/lib/sheet-gesture'
 
-type SheetPhase = 'opening' | 'open' | 'closing'
-
 const EXIT_MS = 240
-const SWIPE_RETURN_MS = 240
+const DRAG_START_PX = 6 // finger travel before a touch counts as a sheet drag (keeps taps working)
 
-type SheetMotionOptions = {
-  /** Use frame-synced dragging and a smooth settle-back for swipe gestures. */
-  smoothSwipe?: boolean
-}
-
-type DragStart = {
-  pointerId: number
-  y: number
-  startedAt: number
-  offsetY: number
-}
+type Drag = { pointerId: number; startY: number; startedAt: number; active: boolean }
 
 const prefersReducedMotion = () =>
   typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
 
+// On wider screens the sheet is a centered dialog, not a draggable bottom sheet.
+const isDesktopLayout = () => typeof window !== 'undefined' && window.matchMedia?.('(min-width: 640px)').matches
+
 /**
- * Bottom-sheet motion shared by every sheet (profile, reminders, your routine).
+ * Motion for every bottom sheet (profile, reminders, your routine): ONE code path for all three.
  *
- * Why closing used to stutter on slower phones: the moment you tapped close, the whole page
- * re-rendered (React state change) while the slide-out was starting, so the first frames of the
- * animation were dropped. Now the exit is started straight from the DOM (a pure transform
- * transition that runs on the GPU, with zero React work), and the parent is only told to close
- * AFTER the sheet is already off screen. Swipe-to-close continues from the exact finger position.
+ * Why the heavier sheets stuttered on slower phones: the animation phase used to live in React
+ * state, so every step (opening, open, closing, unmounted) re-rendered the whole sheet and all of
+ * its content, in the middle of the animation. Now React renders a sheet only twice (mount and
+ * unmount). Every animation step is applied straight to the DOM, so the slide itself is a pure
+ * GPU transform with no JavaScript work, and the parent page is only told to close AFTER the
+ * sheet is already off screen. Swipes continue from the exact finger position.
  */
-export function useSheetMotion(open: boolean, onClose: () => void, options: SheetMotionOptions = {}) {
-  const smoothSwipe = options.smoothSwipe ?? false
+export function useSheetMotion(open: boolean, onClose: () => void) {
   const [mounted, setMounted] = useState(open)
-  const [phase, setPhase] = useState<SheetPhase>(open ? 'open' : 'opening')
   const rootRef = useRef<HTMLDivElement>(null)
   const panelRef = useRef<HTMLDivElement>(null)
-  const dragStart = useRef<DragStart | null>(null)
+  const drag = useRef<Drag | null>(null)
   const exiting = useRef(false) // our own exit animation is running
   const exitTimer = useRef<number | null>(null)
-  const swipeReturnTimer = useRef<number | null>(null)
   const onCloseRef = useRef(onClose)
 
   useEffect(() => {
     onCloseRef.current = onClose
   }, [onClose])
 
+  // Follow the `open` prop.
   useEffect(() => {
-    if (!open) {
-      if (exiting.current) {
-        // The slide-out already played, so unmount without any further animation.
-        exiting.current = false
-        setMounted(false)
-        return
+    if (open) {
+      if (exitTimer.current !== null) window.clearTimeout(exitTimer.current)
+      exitTimer.current = null
+      exiting.current = false
+      const root = rootRef.current
+      if (root) {
+        // Re-opened while a previous exit was still on screen.
+        root.removeAttribute('data-closing')
+        root.dataset.state = 'open'
+        panelRef.current?.style.removeProperty('transition')
+        panelRef.current?.style.removeProperty('transform')
       }
-      // Closed by the parent (e.g. signing out): play the exit, then unmount.
-      setPhase('closing')
-      const timer = window.setTimeout(() => setMounted(false), prefersReducedMotion() ? 0 : EXIT_MS)
-      return () => window.clearTimeout(timer)
+      setMounted(true)
+      return
     }
 
-    // (Re)opening, possibly while a previous exit was still finishing.
-    if (exitTimer.current !== null) window.clearTimeout(exitTimer.current)
-    if (swipeReturnTimer.current !== null) window.clearTimeout(swipeReturnTimer.current)
-    exitTimer.current = null
-    swipeReturnTimer.current = null
-    exiting.current = false
-    rootRef.current?.removeAttribute('data-closing')
-    if (panelRef.current) {
-      panelRef.current.style.removeProperty('transition')
-      panelRef.current.style.removeProperty('transform')
+    if (exiting.current) {
+      // The slide-out already played, so just unmount.
+      exiting.current = false
+      setMounted(false)
+      return
     }
-    setMounted(true)
-    setPhase('opening')
-    const frame = window.requestAnimationFrame(() => setPhase('open'))
-    return () => window.cancelAnimationFrame(frame)
+
+    // Closed by the parent (for example on sign-out): play the exit, then unmount.
+    const root = rootRef.current
+    if (!root) {
+      setMounted(false)
+      return
+    }
+    root.dataset.state = 'closing'
+    const timer = window.setTimeout(() => setMounted(false), prefersReducedMotion() ? 0 : EXIT_MS)
+    return () => window.clearTimeout(timer)
   }, [open])
+
+  // Right after the sheet is added to the page, start the slide-in (no React re-render involved).
+  useEffect(() => {
+    if (!mounted || !open) return
+    const root = rootRef.current
+    if (!root || root.dataset.state === 'open') return
+    void root.offsetHeight // apply the "opening" styles first so the transition actually runs
+    root.dataset.state = 'open'
+  }, [mounted, open])
 
   useEffect(
     () => () => {
       if (exitTimer.current !== null) window.clearTimeout(exitTimer.current)
-      if (swipeReturnTimer.current !== null) window.clearTimeout(swipeReturnTimer.current)
     },
     []
   )
@@ -90,10 +92,6 @@ export function useSheetMotion(open: boolean, onClose: () => void, options: Shee
   const close = useCallback(() => {
     if (exiting.current) return
     exiting.current = true
-    if (swipeReturnTimer.current !== null) {
-      window.clearTimeout(swipeReturnTimer.current)
-      swipeReturnTimer.current = null
-    }
     const duration = prefersReducedMotion() ? 0 : EXIT_MS
     const panel = panelRef.current
     if (panel) {
@@ -109,85 +107,45 @@ export function useSheetMotion(open: boolean, onClose: () => void, options: Shee
   }, [])
 
   const onPointerDown = (event: PointerEvent<HTMLDivElement>) => {
-    if (exiting.current) return
+    if (exiting.current || isDesktopLayout()) return
     if (event.pointerType === 'mouse' && event.button !== 0) return
-    const panel = panelRef.current
-    let offsetY = 0
-    if (smoothSwipe && panel && swipeReturnTimer.current !== null) {
-      const transform = window.getComputedStyle(panel).transform
-      const values = transform.startsWith('matrix3d(')
-        ? transform.slice(9, -1).split(',')
-        : transform.startsWith('matrix(')
-          ? transform.slice(7, -1).split(',')
-          : []
-      const translateY = values.length === 16 ? values[13] : values.length === 6 ? values[5] : '0'
-      offsetY = Math.max(0, Number(translateY) || 0)
-      if (swipeReturnTimer.current !== null) {
-        window.clearTimeout(swipeReturnTimer.current)
-        swipeReturnTimer.current = null
-      }
-    }
-    dragStart.current = { pointerId: event.pointerId, y: event.clientY, startedAt: performance.now(), offsetY }
-    if (panel) {
-      panel.style.transition = 'none'
-      if (smoothSwipe) panel.style.transform = `translate3d(0, ${offsetY}px, 0)`
-    }
-    event.currentTarget.setPointerCapture(event.pointerId)
+    drag.current = { pointerId: event.pointerId, startY: event.clientY, startedAt: performance.now(), active: false }
   }
 
   const onPointerMove = (event: PointerEvent<HTMLDivElement>) => {
-    const start = dragStart.current
-    if (!start || start.pointerId !== event.pointerId) return
-    const distance = Math.max(0, start.offsetY + event.clientY - start.y)
+    const d = drag.current
     const panel = panelRef.current
-    if (!panel) return
+    if (!d || !panel || d.pointerId !== event.pointerId) return
 
-    // Match the profile sheet's direct transform updates so the panel follows the finger
-    // immediately; this path does no React state work or scheduled layout on release.
-    panel.style.transform = `translate3d(0, ${distance}px, 0)`
+    if (!d.active) {
+      if (event.clientY - d.startY < DRAG_START_PX) return // a tap, or an upward move
+      d.active = true
+      d.startY = event.clientY
+      d.startedAt = performance.now()
+      panel.style.transition = 'none'
+      try {
+        event.currentTarget.setPointerCapture(event.pointerId)
+      } catch {
+        // pointer already released
+      }
+    }
+    panel.style.transform = `translate3d(0, ${Math.max(0, event.clientY - d.startY)}px, 0)`
   }
 
   const finishDrag = (event: PointerEvent<HTMLDivElement>, cancelled: boolean) => {
-    const start = dragStart.current
-    if (!start || start.pointerId !== event.pointerId) return
-    dragStart.current = null
-    const fingerDistance = Math.max(0, event.clientY - start.y)
+    const d = drag.current
+    if (!d || d.pointerId !== event.pointerId) return
+    drag.current = null
+    if (!d.active) return
+
     const panel = panelRef.current
-
-    if (smoothSwipe) {
-      const elapsed = Math.max(1, performance.now() - start.startedAt)
-      const velocity = (event.clientY - start.y) / elapsed
-      const dismiss = !cancelled && shouldDismissSheetSwipe(fingerDistance, panel?.clientHeight ?? 0, velocity)
-      if (dismiss) {
-        close()
-        return
-      }
-
-      if (panel) {
-        if (prefersReducedMotion()) {
-          panel.style.removeProperty('transition')
-          panel.style.removeProperty('transform')
-        } else {
-          panel.style.transition = `transform ${SWIPE_RETURN_MS}ms cubic-bezier(0.32, 0.72, 0, 1)`
-          panel.style.transform = 'translate3d(0, 0, 0)'
-          swipeReturnTimer.current = window.setTimeout(() => {
-            swipeReturnTimer.current = null
-            if (panelRef.current === panel && !exiting.current) {
-              panel.style.removeProperty('transition')
-              panel.style.removeProperty('transform')
-            }
-          }, SWIPE_RETURN_MS + 24)
-        }
-      }
-      return
-    }
-
-    const dismiss = !cancelled && fingerDistance > Math.max(96, (panel?.clientHeight ?? 0) * 0.2)
-    if (dismiss) {
+    const distance = Math.max(0, event.clientY - d.startY)
+    const velocity = distance / Math.max(1, performance.now() - d.startedAt)
+    if (!cancelled && shouldDismissSheetSwipe(distance, panel?.clientHeight ?? 0, velocity)) {
       close()
       return
     }
-    // Not far enough: spring back to rest.
+    // Not far enough: settle back to rest (the sheet's own CSS transition animates it).
     if (panel) {
       panel.style.removeProperty('transition')
       panel.style.removeProperty('transform')
@@ -196,10 +154,11 @@ export function useSheetMotion(open: boolean, onClose: () => void, options: Shee
 
   return {
     mounted,
-    phase,
     close,
-    rootRef,
     panelRef,
+    // Spread onto the sheet's outer wrapper. data-state stays "opening" in React's eyes forever;
+    // the hook flips the real DOM attribute itself, so React never re-renders for animation.
+    rootProps: { ref: rootRef, 'data-state': 'opening', role: 'presentation' } as const,
     dragHandleProps: {
       onPointerDown,
       onPointerMove,

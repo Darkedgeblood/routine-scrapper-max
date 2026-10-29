@@ -115,7 +115,7 @@ export const ReminderSheet = memo(function ReminderSheet({
   onToggle: (id: string) => void | Promise<void>
   onRemove: (id: string) => void | Promise<void>
 }) {
-  const sheet = useSheetMotion(open, onClose, { smoothSwipe: true })
+  const sheet = useSheetMotion(open, onClose)
   const today = now ?? new Date()
   const [type, setType] = useState<ReminderType>('quiz')
   const [course, setCourse] = useState('')
@@ -154,7 +154,7 @@ export const ReminderSheet = memo(function ReminderSheet({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center" ref={sheet.rootRef} data-state={sheet.phase} role="presentation">
+    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center" {...sheet.rootProps}>
           <button type="button" aria-label="Close reminders" className="sheet-backdrop absolute inset-0 bg-black/50" onClick={sheet.close} />
       <div
         ref={sheet.panelRef}
@@ -166,7 +166,7 @@ export const ReminderSheet = memo(function ReminderSheet({
         <div className="sheet-drag-handle flex h-7 shrink-0 items-center justify-center sm:hidden" {...sheet.dragHandleProps} aria-hidden="true">
           <span className="sheet-grabber" />
         </div>
-        <div className="flex items-center justify-between px-5 pb-3 pt-1 sm:pt-5">
+        <div className="flex touch-none select-none items-center justify-between px-5 pb-3 pt-1 sm:pt-5" {...sheet.dragHandleProps}>
           <h2 className="text-[22px] font-bold tracking-tight">Reminders</h2>
           <button
             type="button"
