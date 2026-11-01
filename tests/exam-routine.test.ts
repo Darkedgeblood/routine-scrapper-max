@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 
 import {
   BATCH_69_MIDTERM_EXAMS,
+  BATCH_69_MIDTERM_PAUSED_CLASS_DATES,
   BATCH_69_MIDTERM_PERIOD,
   filterMidtermPeriodClasses,
   getBatch69MidtermExams,
@@ -108,14 +109,20 @@ test('pauses Batch 69 regular classes inclusively from October 28 through Novemb
   assert.equal(isBatch69MidtermPeriod('2026-10-29', '68_A'), false)
 })
 
-test('hides regular class cards but preserves personal retake classes in the exam period', () => {
+test('hides regular and personal retake classes throughout the exam period', () => {
   const regularClass = { courseCode: 'CSE221', isRetake: false }
   const retakeClass = { courseCode: 'CSE215', isRetake: true }
 
-  assert.deepEqual(
-    filterMidtermPeriodClasses([regularClass, retakeClass], '2026-10-29', '69_P'),
-    [retakeClass]
-  )
+  for (const date of BATCH_69_MIDTERM_PAUSED_CLASS_DATES) {
+    assert.deepEqual(
+      filterMidtermPeriodClasses([regularClass, retakeClass], date, '69_P'),
+      [],
+      `no routine or retake classes should show on ${date}`
+    )
+  }
+
+  assert.deepEqual(filterMidtermPeriodClasses([regularClass, retakeClass], '2026-10-31', '69_P'), [])
+  assert.deepEqual(filterMidtermPeriodClasses([regularClass, retakeClass], '2026-11-01', '69_P'), [])
   assert.deepEqual(
     filterMidtermPeriodClasses([regularClass, retakeClass], '2026-11-05', '69_P'),
     [regularClass, retakeClass]

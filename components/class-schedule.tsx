@@ -99,7 +99,7 @@ export const ClassSchedule = memo(function ClassSchedule({
       >
         {midtermPeriod && (
           <div className="panel panel-dim rounded-2xl px-4 py-3 text-[13px] text-slate-600 dark:text-slate-300">
-            Regular classes are paused during the Batch 69 midterm exam period (Oct 28–Nov 4).
+            All classes, including retakes, are paused during the Batch 69 midterm exam period (Oct 28–Nov 4).
           </div>
         )}
         {midtermExams.map((exam) => (
