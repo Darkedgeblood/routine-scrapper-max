@@ -49,7 +49,7 @@ test('shows each exam to Batch 69 sections only', () => {
   assert.deepEqual(getBatch69MidtermExams(null, '69_P'), [])
 })
 
-test('returns room allocations for the selected section and total seat counts', () => {
+test('returns published CSE221 room allocations for sections A through P', () => {
   const [sectionPExam] = getBatch69MidtermExams('2026-10-29', '69_P')
   assert.deepEqual(sectionPExam?.seatAllocation, {
     instructorInitials: 'SRS',
@@ -57,7 +57,7 @@ test('returns room allocations for the selected section and total seat counts', 
     totalSeats: 47,
   })
 
-  for (const suffix of ['I', 'J', 'K', 'L', 'M', 'N', 'O', 'P']) {
+  for (const suffix of 'ABCDEFGHIJKLMNOP') {
     const [exam] = getBatch69MidtermExams('2026-10-29', `69_${suffix}`)
     const allocation = exam?.seatAllocation
     assert.ok(allocation, `expected a room allocation for section 69_${suffix}`)
@@ -68,8 +68,35 @@ test('returns room allocations for the selected section and total seat counts', 
     )
   }
 
-  const [unavailableSectionExam] = getBatch69MidtermExams('2026-10-29', '69_A')
-  assert.equal(unavailableSectionExam?.seatAllocation, null)
+  const [sectionAExam] = getBatch69MidtermExams('2026-10-29', '69_A')
+  assert.deepEqual(sectionAExam?.seatAllocation, {
+    instructorInitials: 'SEA',
+    rooms: [{ room: 'ANX1-101', seats: 26 }, { room: 'ANX1-102', seats: 16 }, { room: 'ANX1-103', seats: 4 }],
+    totalSeats: 46,
+  })
+})
+
+test('returns Nov 1 CSE215 allocations for published sections I through P only', () => {
+  const [sectionPExam] = getBatch69MidtermExams('2026-11-01', '69_P')
+  assert.deepEqual(sectionPExam?.seatAllocation, {
+    instructorInitials: 'SRRS',
+    rooms: [{ room: '514', seats: 5 }, { room: '515', seats: 24 }, { room: '516', seats: 19 }],
+    totalSeats: 48,
+  })
+
+  for (const suffix of 'IJKLMNOP') {
+    const [exam] = getBatch69MidtermExams('2026-11-01', `69_${suffix}`)
+    const allocation = exam?.seatAllocation
+    assert.ok(allocation, `expected a CSE215 room allocation for section 69_${suffix}`)
+    assert.equal(
+      allocation.rooms.reduce((sum, room) => sum + room.seats, 0),
+      allocation.totalSeats,
+      `room counts should add up for section 69_${suffix}`
+    )
+  }
+
+  const [unpublishedSectionExam] = getBatch69MidtermExams('2026-11-01', '69_A')
+  assert.equal(unpublishedSectionExam?.seatAllocation, null)
 })
 
 test('pauses Batch 69 regular classes inclusively from October 28 through November 4', () => {
