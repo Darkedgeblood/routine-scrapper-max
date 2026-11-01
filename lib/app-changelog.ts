@@ -3,11 +3,11 @@
  * per device so the notice appears once for each changelog revision.
  */
 export const APP_CHANGELOG = {
-  id: 'web-2026-10-28-seat-plan',
-  date: 'October 28, 2026',
+  id: 'web-2026-11-01-midterm-class-pause',
+  date: 'November 1, 2026',
   items: [
-    'During midterms (Oct 28–Nov 4), regular classes are paused while exam cards and personal retakes remain visible.',
-    'The CSE221 midterm card now shows room-by-room seat counts for sections 69_I through 69_P.',
+    'All Batch 69 classes, including retakes, are paused during the midterm period (Oct 28–Nov 4).',
+    'The CSE221 midterm card now shows room-by-room seat counts for sections 69_A through 69_P, and CSE215 allocations are available for sections 69_I through 69_P.',
     'Quiz, assignment, and presentation dates now stand out in the day bar, and matching class cards get a yellow outline.',
     'Small APK updates no longer interrupt you; install prompts are reserved for major or critical releases.',
   ],

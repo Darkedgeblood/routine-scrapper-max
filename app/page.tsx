@@ -311,7 +311,7 @@ export default function Page() {
         (item) =>
           item.day === FULL_DAYS[day] &&
           (item.section === selectedSection || item.isRetake) &&
-          (!midtermPause || item.isRetake) &&
+          !midtermPause &&
           !isInactive(item, skippedCourses, skippedLabs, labGroup)
       ).length
     }
@@ -397,7 +397,7 @@ export default function Page() {
     : selectedExams[0]
     ? `${selectedExams[0].courseCode} · ${selectedExams[0].startTime} - ${selectedExams[0].endTime}`
     : midtermPeriod
-    ? 'Regular classes are paused'
+    ? 'All classes are paused during exams'
     : upcomingClass
     ? `${upcomingClass.courseCode} · ${upcomingClass.startTime} - ${upcomingClass.endTime}`
     : upNextEmpty

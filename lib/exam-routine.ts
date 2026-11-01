@@ -42,13 +42,13 @@ export function isBatch69MidtermPeriod(date: string | null, section: string) {
     date >= BATCH_69_MIDTERM_PERIOD.start && date <= BATCH_69_MIDTERM_PERIOD.end
 }
 
-/** Keep personal retakes, while pausing regular Batch 69 timetable classes. */
-export function filterMidtermPeriodClasses<T extends { isRetake?: boolean }>(
+/** Hide all routine classes, including personal retakes, during Batch 69 midterms. */
+export function filterMidtermPeriodClasses<T>(
   classes: T[],
   date: string | null,
   section: string
 ): T[] {
-  return isBatch69MidtermPeriod(date, section) ? classes.filter((item) => item.isRetake) : classes
+  return isBatch69MidtermPeriod(date, section) ? [] : classes
 }
 
 // Published Batch 69 mid-semester seat allocations, keyed by exam section.
