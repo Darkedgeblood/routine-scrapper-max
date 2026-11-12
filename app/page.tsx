@@ -93,11 +93,9 @@ export default function Page() {
   useEffect(() => {
     const today = getToday() ?? 'Sat'
 
-    // Restore the last-viewed day (falls back to today).
-    const savedDay = window.localStorage.getItem('routine-day')
-    const initialDay = savedDay && (DAYS as readonly string[]).includes(savedDay) ? (savedDay as (typeof DAYS)[number]) : today
-    setSelectedDay(initialDay)
-    setTabDay(initialDay)
+    // Always open on today's schedule, even if another day was selected last session.
+    setSelectedDay(today)
+    setTabDay(today)
 
     // Restore dark mode (defaults to dark).
     const savedTheme = window.localStorage.getItem('routine-theme') as ThemeMode | null
